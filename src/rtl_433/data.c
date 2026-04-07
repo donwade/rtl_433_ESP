@@ -151,6 +151,11 @@ alloc_error:
     return NULL;
 }
 
+// the static analyzer can't prove the allocs to be correct
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-warning-option"
+#pragma GCC diagnostic ignored "-Wanalyzer-malloc-leak"
+
 static data_t *vdata_make(data_t *first, const char *key, const char *pretty_key, va_list ap)
 {
     data_type_t type;
@@ -362,6 +367,10 @@ R_API data_t *data_retain(data_t *data)
     return data;
 }
 
+#if defined(__clang__)
+    // ignore "call to function _free through pointer to incorrect function type"
+    __attribute__((no_sanitize("undefined")))
+#endif
 R_API void data_free(data_t *data)
 {
     if (data && data->retain) {
@@ -379,6 +388,8 @@ R_API void data_free(data_t *data)
         free(prev_data);
     }
 }
+
+#pragma GCC diagnostic pop
 
 /* data output */
 

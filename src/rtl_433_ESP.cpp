@@ -166,6 +166,8 @@ void rtl_433_ESP::initReceiver(byte inputPin, float receiveFrequency) {
   logprintfLn(LOG_INFO, STR_MODULE " SPI Config SCK: %d, MISO: %d, MOSI: %d, CS: %d", RF_MODULE_SCK, RF_MODULE_MISO, RF_MODULE_MOSI, RF_MODULE_CS);
 #  endif
   newSPI.begin(RF_MODULE_SCK, RF_MODULE_MISO, RF_MODULE_MOSI, RF_MODULE_CS);
+#else
+	#error WTF NO MOSI etc?
 #endif
 
   /*----------------------------- Initialize Transceiver -----------------------------*/
@@ -258,12 +260,18 @@ void rtl_433_ESP::initReceiver(byte inputPin, float receiveFrequency) {
     RADIOLIB_STATE(state, "OokFixedThreshold");
 
     state = radio.setBitRate(1.2);
+    logprintfLn(LOG_INFO, "setBitRate 1.2k");
     RADIOLIB_STATE(state, "setBitRate");
 
     state = radio.setRxBandwidth(SX127X_RXBANDWIDTH); // Lowering to 125 lowered number of received signals
+    logprintfLn(LOG_INFO, "SX127X_RXBANDWIDTH = %d", SX127X_RXBANDWIDTH);
     RADIOLIB_STATE(state, "setRxBandwidth");
 
-  } else {
+    //https://www.google.com/search?client=ubuntu-sn&channel=fs&q=Acurite-5n1+vs+Acurite-511
+
+  } 
+  else
+  {
     // From https://github.com/matthias-bs/BresserWeatherSensorReceiver/issues/41#issuecomment-1458166772
     // radio.begin(868.3, 17.24, 40, 270, 10, 32);
     // carrier frequency:                   868.3 MHz
@@ -424,6 +432,7 @@ void rtl_433_ESP::resetReceiver() {
 void rtl_433_ESP::enableReceiver() {
   if (receiverGpio >= 0) {
     pinMode(receiverGpio, INPUT);
+	logprintfLn(LOG_INFO, "Pin %d has interrupt handler %d", receiverGpio);
     attachInterrupt((uint8_t)receiverGpio, interruptHandler, CHANGE);
     _enabledReceiver = true;
   }
@@ -547,10 +556,12 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
 
 #ifdef AUTORSSITHRESHOLD
         rssiThreshold = averageRssi + rssiThresholdDelta;
+  #ifdef DWADE
         logprintfLn(LOG_DEBUG,
                     "Average RSSI Signal %d dbm, adjusted RSSI Threshold %d, "
                     "samples %d",
                     averageRssi, rssiThreshold, RSSI_SAMPLES);
+  #endif
 #endif
 
         _totalRssi = 0;
@@ -618,6 +629,7 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
                 signalEnd - signalStart;
             _pulseTrains[_actualPulseTrain].signalRssi = signalRssi;
 #ifdef DEMOD_DEBUG
+  #ifdef DWADE
             logprintf(LOG_INFO, "Signal length: %lu",
                       _pulseTrains[_actualPulseTrain].signalDuration);
             alogprintf(LOG_INFO, ", Gap length: %lu", signalStart - gapStart);
@@ -626,6 +638,7 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
             alogprintf(LOG_INFO, ", train: %d", _actualPulseTrain);
             alogprintf(LOG_INFO, ", messageCount: %d", messageCount);
             alogprintfLn(LOG_INFO, ", pulses: %d", _nrpulses);
+  #endif
 #endif
             messageCount++;
             gapStart = micros();
@@ -634,10 +647,11 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
           } else {
             ignoredSignals++;
 #ifdef DEMOD_DEBUG
-            if (micros() - signalStart > 1000) {
-              logprintf(LOG_INFO, "Ignored Signal length: %lu",
-                        signalEnd - signalStart);
 
+            if (micros() - signalStart > 1000) {
+  #ifdef DWADE
+			  logprintf(prio,args...)(LOG_INFO, "Ignored Signal length: %lu",
+                        signalEnd - signalStart);
               alogprintf(LOG_INFO, ", Time since last bit length: %lu",
                          micros() - signalEnd);
               alogprintf(LOG_INFO, ", Gap length: %lu", signalStart - gapStart);
@@ -645,6 +659,7 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
               alogprintf(LOG_INFO, ", Current RSSI: %d", currentRssi);
               alogprintf(LOG_INFO, ", pulses: %d", _nrpulses);
               alogprintfLn(LOG_INFO, ", noise count: %d", _noiseCount);
+  #endif
               gapStart = micros();
             }
 #endif
@@ -718,6 +733,16 @@ void rtl_433_ESP::setOOKThreshold(int newOokThreshold) {
  * 
  * @param debug 
  */
+
+  /**
+   * rtlDebug
+   * 0=normal
+   * 1=verbose
+   * 2=verbose decoders
+   * 3=debug decoders
+   * 4=trace decoding
+   */
+   
 void rtl_433_ESP::setDebug(int debug) {
   rtlVerbose = debug;
   logprintfLn(LOG_INFO, "Setting rtl_433 debug to: %d", rtlVerbose);
@@ -963,7 +988,28 @@ void rtl_433_ESP::getModuleStatus() {
   alogprintfLn(LOG_INFO, "FDEV_LSB: 0x%.2x",
                _mod->SPIreadRegister(RADIOLIB_SX127X_REG_FDEV_LSB));
  }
-  alogprintfLn(LOG_INFO, "----- SX127x Status -----");
+
+#ifdef MEMORY_DEBUG
+   alogprintfLn(LOG_INFO, "\n");
+  
+   for(int i = 0; i < 0x4E; i++)
+   {
+   	alogprintfLn(LOG_INFO, "SX127x[0x%.2x] 0x%.2x", i, _mod->SPIreadRegister(i));
+   }
+  
+  #define DUMPER(z) alogprintfLn(LOG_INFO, "SX127x[0x%.2x] 0x%.2x", z, _mod->SPIreadRegister(z))
+   DUMPER(0x4B);
+   DUMPER(0x4D);
+   DUMPER(0x5B);
+   DUMPER(0x5D);
+  
+   for(int i = 0x61; i < 0x65; i++)
+   {
+   	alogprintfLn(LOG_INFO, "SX127x[0x%.2x] 0x%.2x", i, _mod->SPIreadRegister(i));
+   }
+  
+   alogprintfLn(LOG_INFO, "----- AcuriteWx-M5 SX127x Status -----");
+#endif
 
 #endif
 }

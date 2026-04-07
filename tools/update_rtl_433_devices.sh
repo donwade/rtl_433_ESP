@@ -7,7 +7,7 @@ export FSK_MODULATION="FSK_PULSE_MANCHESTER_ZEROBIT|FSK_PULSE_PCM|FSK_PULSE_PWM"
 rm copy.list devices.list decoder.fragment
 
 ( cd .. ; rm -rf rtl_433 ; git clone https://github.com/merbanan/rtl_433 )
-( cd ../rtl_433/src/devices/ ; egrep "\.name|\.modulation|\.decode_fn|^r_device " *.c ) |\
+( cd ../rtl_433/src/devices/ ; egrep "\.name|\.modulation|\.decode_fn|^r_device " acurite*.c ) |\
     awk -f device.awk | awk -F : '{ print $1 }' | sort | uniq > copy.list
 
 echo "Clone from rtl_433 complete"
@@ -51,7 +51,7 @@ echo "Problematic decoders removed"
 
 # create include/rtl_433_devices.h
 
-( cd ../src/rtl_433/devices ; egrep "\.name|\.modulation|\.decode_fn|^r_device " *.c ) > devices.list
+( cd ../src/rtl_433/devices ; egrep "\.name|\.modulation|\.decode_fn|^r_device " acurite*.c ) > devices.list
 
 OOK_COUNT=`cat devices.list | awk -f device.awk | egrep ${OOK_MODULATION} | awk -F\" '{ print $3 }' | awk -F, '{ print $3 }' | wc | awk '{ print $1 }'`
 FSK_COUNT=`cat devices.list | awk -f device.awk | egrep ${FSK_MODULATION} |awk -F\" '{ print $3 }' | awk -F, '{ print $3 }' | wc | awk '{ print $1 }'`
@@ -92,4 +92,39 @@ echo "" >> decoder.fragment
 echo "  // end of fragment" >> decoder.fragment
 
 echo
+echo "Please update src/signalDecoder.cpp with decoder.fragment"
 
+# copy src files from rtl_433/src to src/rtl_433
+echo
+echo "Copying src files"
+echo
+for i in `cat src_copy_list`
+do
+    echo "Copying rtl_433/src "$i" to src/rtl_433"
+    cp ../rtl_433/src/$i ../src/rtl_433
+done
+echo
+echo "These src files need copying and updating"
+echo
+for i in `cat src_copy_and_edit_list`
+do
+    echo "cp ../rtl_433/src/"$i" ../src/rtl_433"
+done
+
+# copy include files from rtl_433/include to include
+
+echo
+echo "Copying include files"
+echo
+for i in `cat include_copy_list`
+do
+    echo "Copying rtl_433/include "$i" to include"
+    cp ../rtl_433/include/$i ../include
+done
+echo
+echo "These include files need copying and updating"
+echo
+for i in `cat include_copy_and_edit_list`
+do
+    echo "cp ../rtl_433/include/"$i" ../include"
+done
