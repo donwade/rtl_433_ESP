@@ -149,10 +149,11 @@ void rtl_433_ESP::initReceiver(byte inputPin, float receiveFrequency) {
 #ifdef MEMORY_DEBUG
   logprintfLn(LOG_INFO, "Pre initReceiver: %d", ESP.getFreeHeap());
 #endif
-#ifdef DEMOD_DEBUG
+
+//#ifdef DEMOD_DEBUG
   logprintfLn(LOG_INFO, STR_MODULE " gpio receive pin: %d", inputPin);
   logprintfLn(LOG_INFO, STR_MODULE " receive frequency: %f", receiveFrequency);
-#endif
+//#endif
 
   rtlSetup();
 
@@ -629,7 +630,6 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
                 signalEnd - signalStart;
             _pulseTrains[_actualPulseTrain].signalRssi = signalRssi;
 #ifdef DEMOD_DEBUG
-  #ifdef DWADE
             logprintf(LOG_INFO, "Signal length: %lu",
                       _pulseTrains[_actualPulseTrain].signalDuration);
             alogprintf(LOG_INFO, ", Gap length: %lu", signalStart - gapStart);
@@ -638,7 +638,6 @@ void rtl_433_ESP::rtl_433_ReceiverTask(void* pvParameters) {
             alogprintf(LOG_INFO, ", train: %d", _actualPulseTrain);
             alogprintf(LOG_INFO, ", messageCount: %d", messageCount);
             alogprintfLn(LOG_INFO, ", pulses: %d", _nrpulses);
-  #endif
 #endif
             messageCount++;
             gapStart = micros();

@@ -236,7 +236,7 @@ void rtlSetup() {
     logprintfLn(LOG_INFO, "size of pulse_data: %d", sizeof(pulse_data_t));
 #endif
 
-#ifdef DEMOD_DEBUG
+#ifdef DEMOD_DEBUG || 1
     logprintfLn(LOG_INFO, "# of device(s) configured %d", cfg->num_r_devices);
     logprintfLn(LOG_INFO, "ssizeof(r_device): %d", sizeof(r_device));
     logprintfLn(LOG_INFO, "cfg->devices size: %d",

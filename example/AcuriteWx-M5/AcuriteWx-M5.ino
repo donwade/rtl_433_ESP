@@ -6,6 +6,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 #include <rtl_433_ESP.h>
+#include "WxUI.h"
 
 #ifndef RF_MODULE_FREQUENCY
 #  define RF_MODULE_FREQUENCY 433.92
@@ -55,7 +56,7 @@ void setup() {
   Log.notice(F(" " CR));
   Log.notice(F("****** setup ******" CR));
   rf.initReceiver(RF_MODULE_RECEIVER_GPIO, RF_MODULE_FREQUENCY);
-  rf.setCallback(rtl_433_Callback, messageBuffer, JSON_MSG_BUFFER);
+  rf.setCallback(json_433_Callback, messageBuffer, JSON_MSG_BUFFER);
   rf.enableReceiver();
   Log.notice(F("****** setup complete ******" CR));
   rf.getModuleStatus();
