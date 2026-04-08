@@ -21,8 +21,9 @@ int count = 0;
 
 void rtl_433_Callback(char* message) {
   JsonDocument jsonDocument;
-  deserializeJson(jsonDocument,message);
-  logJson(jsonDocument);
+   deserializeJson(jsonDocument,message);
+   serializeJsonPretty(jsonDocument, Serial); Serial.print("\n\n");
+  //logJson(jsonDocument);
   count++;
 }
 
