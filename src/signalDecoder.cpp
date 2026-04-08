@@ -272,8 +272,9 @@ void rtlSetup() {
 
       char* arg = NULL;
       char verbose[4] = "vvv";
+      
 #ifndef RTL_VERBOSE
-#  define RTL_VERBOSE -1
+#  define RTL_VERBOSE 0
 #endif
       if (RTL_VERBOSE && i == RTL_VERBOSE) {
         arg = verbose;
