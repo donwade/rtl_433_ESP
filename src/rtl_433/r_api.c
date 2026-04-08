@@ -977,7 +977,8 @@ void data_acquired_handler(r_device* r_dev, data_t* data) {
               DATA_INT, cfg->demod->pulse_data.signalRssi, "duration", "",
               DATA_INT, cfg->demod->pulse_data.signalDuration, NULL);
   data_print_jsons(data, cfg->messageBuffer, cfg->bufferSize);
-#ifdef DEMOD_DEBUG
+
+#if 0  // #ifdef DEMOD_DEBUG flag has mixed domain purposes.
   logprintfLn(LOG_INFO, "data_output %s", cfg->messageBuffer);
 #endif
 
