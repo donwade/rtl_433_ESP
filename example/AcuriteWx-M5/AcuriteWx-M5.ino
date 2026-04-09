@@ -6,7 +6,10 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 #include <rtl_433_ESP.h>
+
 #include "WxUI.h"
+#include "_m5Core2-only.h"
+
 
 #ifndef RF_MODULE_FREQUENCY
 #  define RF_MODULE_FREQUENCY 433.92
@@ -46,9 +49,8 @@ void logJson(JsonDocument jsondata) {
 }
 
 void setup() {
-  M5.begin();   // power up bus
-  Serial.begin(921600);
-  delay(1000);
+  setup_WxUI();
+
 #ifndef LOG_LEVEL
   LOG_LEVEL_SILENT
 #endif
@@ -110,7 +112,10 @@ int next = uptime() + 30;
 float step = stepMin;
 #endif
 
-void loop() {
+void loop() 
+{
+  loop_WxUI();
+
   rf.loop();
 #if defined(setBitrate) || defined(setFreqDev) || defined(setRxBW)
   char stepPrint[8];
