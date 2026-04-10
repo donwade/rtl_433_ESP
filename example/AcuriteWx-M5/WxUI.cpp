@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include "WxUI.h"
+#include "WxWind.h"
+
 #include "_m5Core2-only.h"
 
 #include "pretty.h"
@@ -45,17 +47,32 @@ void setup() {
 
 JsonDocument jsonDecoded;
 
+volatile float currentWindSpeed = 1.0;
+volatile bool  bLastWindSpeed = false;
+
 void json_433_Callback(char* jsonIn)
 {
    deserializeJson(jsonDecoded,jsonIn);
   //logJson(jsonDecoded);
 
+  float windNow;
+  windNow = jsonDecoded["wind_avg_km_h"];
+  
   uint16_t id = jsonDecoded["id"];
+  
   switch (id)
   {
   	case 3870:
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
   		Serial.printf(FG_GREEN "valid device detected\n\n" FG_DONE);
+  		Serial.printf(FG_YELLOW "hi don %f\n", currentWindSpeed);
+
+		if (windNow != currentWindSpeed)
+		{
+			currentWindSpeed = windNow;
+			bLastWindSpeed = true;
+  		}
+  		
   	break;
 
   	default:
@@ -65,13 +82,85 @@ void json_433_Callback(char* jsonIn)
   }
 }
 
+
+void loop_WxUI(void *)
+{
+	while(true)
+	{
+		if (bLastWindSpeed)
+		{
+			bLastWindSpeed = false;
+			WxWindDrawWind ((uint8_t)(currentWindSpeed + .5), 33);
+			Serial.printf("hi sandi %f\n", currentWindSpeed);
+		}
+		delay(500);
+	}
+}
+
+/*
+BaseType_t xTaskCreatePinnedToCore(
+    TaskFunction_t pvTaskCode,    // Function to run
+    const char * const pcName,    // Task name
+    const uint32_t usStackDepth,  // Stack size in words (not bytes)
+    void * const pvParameters,    // Parameter to pass
+    UBaseType_t uxPriority,       // Task priority
+    TaskHandle_t * const pxCreatedTask, // Task handle
+    const BaseType_t xCoreID      // Core ID (0 or 1)
+);
+
+*/
+
+TaskHandle_t hWxUI = NULL;
+
 void setup_WxUI(void)
 {
 	_setup_M5();
+
+	xTaskCreatePinnedToCore(loop_WxUI,	// function name.
+							"WindTsk", 	// name
+							8000, 		// stack words.
+							NULL,		// no params.
+							8,			// priority 8
+							&hWxUI,		// thread handle
+							0			// run core X x=0,1,tskNO_AFFINITY
+							);  
 }
 
-void loop_WxUI(void)
+/* TIP: how specifying HARD time for task to wake up at.
+ vTaskDelayUntil is a FreeRTOS API function used to delay a task 
+ until a specific ABSOLUTE time, 
+ ensuring precise, consistent periodic execution. 
+ Unlike vTaskDelay (relative delay), 
+ vTaskDelayUntil maintains a constant frequency even if the task's processing time varies.
+ 
+void vSomeTaskFunction( void * pvParameters )
 {
-	_loop_M5();
+    // Initialize with current tick count
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = pdMS_TO_TICKS( 100 ); // 100ms period
+
+    for( ;; )
+    {
+        // Delay until 100ms after the last wake time
+        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+
+        // Task code here
+        printf("Task running\n");
+    }
 }
 
+TIP using vTaskDelay to specify ticks instead of arduino delay(xms)
+void vTaskFunction( void * pvParameters )
+{
+    // Block for 500ms.
+    const TickType_t xDelay = 500 / portTICK_PERIOD_MS;
+
+    for( ;; )
+    {
+        // Simply toggle the LED every 500ms, blocking between each toggle. 
+        vToggleLED();
+        vTaskDelay( xDelay );
+    }
+}
+
+*/

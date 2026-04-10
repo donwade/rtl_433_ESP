@@ -9,6 +9,7 @@
 
 #include "WxUI.h"
 #include "_m5Core2-only.h"
+#include "WxWind.h"
 
 
 #ifndef RF_MODULE_FREQUENCY
@@ -49,7 +50,10 @@ void logJson(JsonDocument jsondata) {
 }
 
 void setup() {
+
   setup_WxUI();
+  WxWindDrawWind(37, 45);  // 123kph from 45deg
+  delay(2000);
 
 #ifndef LOG_LEVEL
   LOG_LEVEL_SILENT
@@ -78,43 +82,53 @@ unsigned long uptime() {
 
 int next = uptime() + 30;
 
+#if defined(setBitrate)
+    #error HI THERE
+#endif
+#if defined(setFreqDev)
+    #error HI THERE
+#endif
+#if defined(setRxBW)
+    #error HI THERE
+#endif
+
 #if defined(setBitrate) || defined(setFreqDev) || defined(setRxBW)
 
-#  ifdef setBitrate
-#    define TEST    "setBitrate" // 17.24 was suggested
-#    define STEP    2
-#    define stepMin 1
-#    define stepMax 300
-// #    define STEP    1
-// #    define stepMin 133
-// #    define stepMax 138
-#  elif defined(setFreqDev) // 40 kHz was suggested
-#    define TEST    "setFrequencyDeviation"
-#    define STEP    1
-#    define stepMin 5
-#    define stepMax 200
-#  elif defined(setRxBW)
-#    define TEST "setRxBandwidth"
-
-#    ifdef defined(RF_SX1276) || defined(RF_SX1278)
-#      define STEP    5
-#      define stepMin 5
-#      define stepMax 250
-#    else
-#      define STEP    5
-#      define stepMin 58
-#      define stepMax 812
-// #      define STEP    0.01
-// #      define stepMin 202.00
-// #      define stepMax 205.00
-#    endif
-#  endif
-float step = stepMin;
+    #ifdef setBitrate
+        #define TEST    "setBitrate" // 17.24 was suggested
+        #define STEP    2
+        #define stepMin 1
+        #define stepMax 300
+        // #    define STEP    1
+        // #    define stepMin 133
+        // #    define stepMax 138
+    #elif defined(setFreqDev) // 40 kHz was suggested
+        #define TEST    "setFrequencyDeviation"
+        #define STEP    1
+        #define stepMin 5
+        #define stepMax 200
+    #elif defined(setRxBW)
+        #define TEST "setRxBandwidth"
+        #ifdef defined(RF_SX1276) || defined(RF_SX1278)
+            #define STEP    5
+            #define stepMin 5
+            #define stepMax 250
+        #else
+            #define STEP    5
+            #define stepMin 58
+            #define stepMax 812
+            // #      define STEP    0.01
+            // #      define stepMin 202.00
+            // #      define stepMax 205.00
+       #endif
+    #endif
+    float step = stepMin;
 #endif
 
 void loop() 
 {
-  loop_WxUI();
+
+  _loop_M5();
 
   rf.loop();
 #if defined(setBitrate) || defined(setFreqDev) || defined(setRxBW)
