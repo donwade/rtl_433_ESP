@@ -52,8 +52,10 @@ void setup() {
 
 JsonDocument jsonDecoded;
 
-volatile float currentWindSpeed = 1.0;
-volatile bool  bLastWindSpeed = false;
+volatile float windSpeedCurrent = 1.0;
+volatile float windSpeedLo = 999;
+volatile float windSpeedHi = 0;
+volatile bool  bWindSpeedChanged = false;
 
 void json_433_Callback(char* jsonIn)
 {
@@ -77,7 +79,7 @@ void json_433_Callback(char* jsonIn)
   	case 3870:
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
   		Serial.printf(FG_GREEN "valid device detected\n\n" FG_DONE);
-  		Serial.printf(FG_YELLOW "hi don %f\n", currentWindSpeed);
+  		Serial.printf(FG_YELLOW "hi don %f\n", windSpeedCurrent);
 
 		if (diff > 10000)
 		{
@@ -87,10 +89,12 @@ void json_433_Callback(char* jsonIn)
 		}
 
 		
-		if (windNow != currentWindSpeed)
+		if (windNow != windSpeedCurrent)
 		{
-			currentWindSpeed = windNow;
-			bLastWindSpeed = true;
+			windSpeedHi = windSpeedHi < windSpeedCurrent ? windSpeedCurrent: windSpeedHi;
+			windSpeedLo = windSpeedLo > windSpeedCurrent ? windSpeedCurrent: windSpeedLo;
+			windSpeedCurrent = windNow;
+			bWindSpeedChanged = true;
   		}
   		
   	break;
@@ -107,11 +111,12 @@ void task_WxUI(void *)
 {
 	while(true)
 	{
-		if (bLastWindSpeed)
+		if (bWindSpeedChanged)
 		{
-			bLastWindSpeed = false;
-			WxWindDrawWind (currentWindSpeed, 33);  // don't round we are doing floating point display.
-			Serial.printf("hi sandi %f\n", currentWindSpeed);
+			bWindSpeedChanged = false;
+
+			WxWindDrawItem("WIND", TFT_GREEN, windSpeedCurrent, windSpeedLo, windSpeedHi);
+ 			Serial.printf("WIND %.1f < %.1f < %.1f\n", windSpeedLo, windSpeedCurrent, windSpeedHi);
 		}
 		delay(500);
 	}
