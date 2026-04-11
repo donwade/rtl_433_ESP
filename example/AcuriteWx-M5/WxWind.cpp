@@ -13,7 +13,13 @@
 #include "Free_Fonts.h"
 #include "gfxfont.h"
 
-void WxWindDrawWind(uint8_t speedKph, uint8_t compassDir)
+
+//https://github.com/m5stack/M5Stack/blob/master/examples/Advanced/Display/Free_Font_Demo/Free_Font_Demo.ino
+
+#define VALUE_FONT &fonts::FreeSansBold24pt7b
+#define UNITS_FONT &fonts::FreeSansBold9pt7b
+
+void WxWindDrawWind(float speedKph, uint8_t compassDir)
 {
 	uint16_t display_count = M5.getDisplayCount();
 	Serial.printf("there are %d displays available()\n", display_count);
@@ -26,50 +32,75 @@ void WxWindDrawWind(uint8_t speedKph, uint8_t compassDir)
     uint16_t screenHeight = M5.Lcd.height()-1;
 	uint16_t radius = min(screenWidth, screenHeight) /2;
 	
-    M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius, CYAN);
-    M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius - 16, BLACK);
+    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius, CYAN);
+    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius - 8, BLACK);
 
-    //M5.Display.setCursor(screenWidth/2, screenHeight/2);
-#if 0  
-
-
-	int16_t x=1, y=2;
-	int16_t  x1, y1;
-	uint16_t w, h;
+	M5.Lcd.setTextColor(TFT_GREEN, TFT_BLACK);
 	
-	//M5.Lcd.getTextBounds("FOO", x, y, &x1, &y1, &w, &h);
-    
-    // https://github.com/m5stack/M5Stack/blob/master/src/utility/In_eSPI.h#L554
-    M5.Lcd.setTextDatum(CC_DATUM);  // center horiz + center vert aka CC
-	M5.Lcd.printf("hi");
+	M5.Lcd.setTextDatum(TC_DATUM);  // Centre text on x,y position
 
-//	M5.Lcd.drawString("M5Stack has been connected", 0, 0, 3);
+	//https://m5stack.lang-ship.com/howto/m5gfx/font/   //TIP
+	M5.Lcd.setTextSize(3);
+	M5.Lcd.setFreeFont(VALUE_FONT);
 
-	//tft.drawString("234", screenWidth/2, screenHeight/2, 4);
+	char msg[200];
+	if (speedKph < 10.0)
+		sprintf(msg, "%.1f", speedKph);
+	else
+		sprintf(msg, "%2d", (int) speedKph);
+		
+	 uint16_t cHeight1 = M5.Lcd.fontHeight(VALUE_FONT);
 
-    // M5.Display.printf("%d\n", speedKph);
-#else
-	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-	
-	 M5.Lcd.setTextDatum(TC_DATUM);  // Centre text on x,y position
-	
-     //https://m5stack.lang-ship.com/howto/m5gfx/font/   //TIP
-     M5.Lcd.setTextSize(3);
-     M5.Lcd.setFreeFont(&fonts::FreeMonoBold24pt7b);
-     
- 	 char msg[200];
-	 sprintf(msg, "%2d", speedKph);
-
- 	 uint16_t cHeight = M5.Lcd.fontHeight(&fonts::FreeMonoBold24pt7b);
-	 
-	 M5.Lcd.drawString(
+	// show value	 
+	M5.Lcd.drawString(
 		 msg, 
-		 screenWidth/2, screenHeight/2- cHeight/2,
-		 &fonts::FreeMonoBold24pt7b); //GFXFF);  // Draw the text string in the selected GFX free font
+		 screenWidth/2, screenHeight/2- cHeight1/2,
+		 VALUE_FONT);
+
+	// show units
+
+	M5.Lcd.setTextSize(2);
+
+	uint16_t cHeight2 = M5.Lcd.fontHeight(UNITS_FONT);
+
+	// !!! draw string is NOT subject to set cursor.
+	//     drawing a string is not the same as printing a string
+	///NO NO M5.Display.setCursor(screenWidth/2, screenHeight/2 + cHeight1 + cHeight2/2);
+
+	M5.Lcd.drawString(
+		"kph", 
+		screenWidth/2, screenHeight/2 + cHeight1/2 - cHeight2/2,
+		 UNITS_FONT);
 
 
-    M5.Lcd.display();
-#endif
+	M5.Lcd.display();
 
 }
 
+
+/* TIP list of available fonts
+FreeMono12pt7b.h			FreeSansBoldOblique12pt7b.h
+FreeMono18pt7b.h			FreeSansBoldOblique18pt7b.h
+FreeMono24pt7b.h			FreeSansBoldOblique24pt7b.h
+FreeMono9pt7b.h				FreeSansBoldOblique9pt7b.h
+FreeMonoBold12pt7b.h		FreeSansOblique12pt7b.h
+FreeMonoBold18pt7b.h		FreeSansOblique18pt7b.h
+FreeMonoBold24pt7b.h		FreeSansOblique24pt7b.h
+FreeMonoBold9pt7b.h			FreeSansOblique9pt7b.h
+FreeMonoBoldOblique12pt7b.h	FreeSerif12pt7b.h
+FreeMonoBoldOblique18pt7b.h	FreeSerif18pt7b.h
+FreeMonoBoldOblique24pt7b.h	FreeSerif24pt7b.h
+FreeMonoBoldOblique9pt7b.h	FreeSerif9pt7b.h
+FreeMonoOblique12pt7b.h		FreeSerifBold12pt7b.h
+FreeMonoOblique18pt7b.h		FreeSerifBold18pt7b.h
+FreeMonoOblique24pt7b.h		FreeSerifBold24pt7b.h
+FreeMonoOblique9pt7b.h		FreeSerifBold9pt7b.h
+FreeSans12pt7b.h			FreeSerifBoldItalic12pt7b.h
+FreeSans18pt7b.h			FreeSerifBoldItalic18pt7b.h
+FreeSans24pt7b.h			FreeSerifBoldItalic24pt7b.h
+FreeSans9pt7b.h				FreeSerifBoldItalic9pt7b.h
+FreeSansBold12pt7b.h		FreeSerifItalic12pt7b.h
+FreeSansBold18pt7b.h		FreeSerifItalic18pt7b.h
+FreeSansBold24pt7b.h		FreeSerifItalic24pt7b.h
+FreeSansBold9pt7b.h			FreeSerifItalic9pt7b.h
+*/

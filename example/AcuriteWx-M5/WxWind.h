@@ -1,2 +1,2 @@
-extern void WxWindDrawWind(uint8_t speedKph, uint8_t compassDir);
+extern void WxWindDrawWind(float speedKph, uint8_t compassDir);
 

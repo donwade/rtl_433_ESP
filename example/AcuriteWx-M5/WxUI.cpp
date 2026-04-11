@@ -4,8 +4,13 @@
 #include "WxWind.h"
 
 #include "_m5Core2-only.h"
+#include "_viewController.h"
 
 #include "pretty.h"
+
+TickType_t xMsgSysTick;
+
+
 /* reference
 {
   "model": "Acurite-5n1",
@@ -59,6 +64,13 @@ void json_433_Callback(char* jsonIn)
   windNow = jsonDecoded["wind_avg_km_h"];
   
   uint16_t id = jsonDecoded["id"];
+
+  static uint32_t lastTime = 0;
+  uint32_t now = millis();
+  uint32_t diff = now - lastTime;
+  // messages are sent 3 in a row. Look for time b/n the bursts.
+  diff > 10000 ? lastTime = now : 0;
+  
   
   switch (id)
   {
@@ -67,6 +79,14 @@ void json_433_Callback(char* jsonIn)
   		Serial.printf(FG_GREEN "valid device detected\n\n" FG_DONE);
   		Serial.printf(FG_YELLOW "hi don %f\n", currentWindSpeed);
 
+		if (diff > 10000)
+		{
+			xMsgSysTick = xTaskGetTickCount();
+			Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, 
+					diff, xMsgSysTick);
+		}
+
+		
 		if (windNow != currentWindSpeed)
 		{
 			currentWindSpeed = windNow;
@@ -83,17 +103,63 @@ void json_433_Callback(char* jsonIn)
 }
 
 
-void loop_WxUI(void *)
+void task_WxUI(void *)
 {
 	while(true)
 	{
 		if (bLastWindSpeed)
 		{
 			bLastWindSpeed = false;
-			WxWindDrawWind ((uint8_t)(currentWindSpeed + .5), 33);
+			WxWindDrawWind (currentWindSpeed, 33);  // don't round we are doing floating point display.
 			Serial.printf("hi sandi %f\n", currentWindSpeed);
 		}
 		delay(500);
+	}
+}
+
+
+
+void task_WxRadio(void *)
+{
+	const uint32_t messageTimeMs = 18250;
+	
+	TickType_t copyTime = 0;
+	
+	while(true)
+	{
+		if (xMsgSysTick)
+		{
+			
+		 	_colourBarX(0x00FF00, 40);
+		 	copyTime = xMsgSysTick;
+		 	
+		 	uint32_t addTicks = pdMS_TO_TICKS(messageTimeMs - 1000);
+		 	
+		 	Serial.printf(FG_CYAN "IN : tc in %d + add %d = out %d ?\n" FG_DONE,xMsgSysTick, addTicks, xMsgSysTick + addTicks);
+		 	
+			vTaskDelayUntil( &copyTime,
+							  addTicks);  //open 1 second earlier.
+
+		 	Serial.printf(FG_CYAN "OUT : exit tc= %d\n" FG_DONE, xTaskGetTickCount());
+			xMsgSysTick = 0;
+
+			// window open
+		 	_colourBarX(0x0000FF, 40);
+
+			while(true)
+			{
+				// wait for new message to arrive.
+ 				if (xMsgSysTick)
+ 				{
+ 					break;
+ 				}
+				vTaskDelay(pdMS_TO_TICKS(100));
+			}
+		}
+		else
+		{
+			delay(100); // awaiting first message.
+		}
 	}
 }
 
@@ -111,18 +177,29 @@ BaseType_t xTaskCreatePinnedToCore(
 */
 
 TaskHandle_t hWxUI = NULL;
+TaskHandle_t hWxRadio = NULL;
 
 void setup_WxUI(void)
 {
 	_setup_M5();
+	_setup_lightbar();
 
-	xTaskCreatePinnedToCore(loop_WxUI,	// function name.
+	xTaskCreatePinnedToCore(task_WxUI,	// function name.
 							"WindTsk", 	// name
 							8000, 		// stack words.
 							NULL,		// no params.
 							8,			// priority 8
 							&hWxUI,		// thread handle
 							0			// run core X x=0,1,tskNO_AFFINITY
+							);  
+							
+	xTaskCreatePinnedToCore(task_WxRadio,	// function name.
+							"WindRadio", 	// name
+							8000, 			// stack words.
+							NULL,			// no params.
+							8,				// priority 8
+							&hWxRadio,		// thread handle
+							0				// run core X x=0,1,tskNO_AFFINITY
 							);  
 }
 
@@ -136,13 +213,13 @@ void setup_WxUI(void)
 void vSomeTaskFunction( void * pvParameters )
 {
     // Initialize with current tick count
-    TickType_t xLastWakeTime = xTaskGetTickCount();
+    TickType_t xMsgSysTick = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS( 100 ); // 100ms period
 
     for( ;; )
     {
         // Delay until 100ms after the last wake time
-        vTaskDelayUntil( &xLastWakeTime, xFrequency );
+        vTaskDelayUntil( &xMsgSysTick, xFrequency );
 
         // Task code here
         printf("Task running\n");
