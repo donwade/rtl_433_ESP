@@ -52,9 +52,10 @@ void logJson(JsonDocument jsondata) {
 void setup() {
 
   setup_WxUI();
-  
+
+ 
   //WxWindDrawWind(37, 45);  // 123kph from 45deg
-  WxWindDrawItem("Wind", TFT_GREEN, 10, -1., +100.);
+  //WxWindDrawItem("Wind", TFT_GREEN, 10, -1., +100.);
   delay(4000);
 
 #ifndef LOG_LEVEL

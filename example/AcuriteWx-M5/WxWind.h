@@ -1,19 +1,24 @@
-#include <M5GFX.h> 
+#ifndef _WXUI
+#define _WXUI
 
-void WxWindDrawWind(float speedKph, uint8_t compassDir);
-#if 0
-void WxWindDrawItem(char *valueName,
-                    uint32_t gfxColour = WHITE, 
-                    float value = 0.0, 
-                    float valueMin = -99., 
-                    float valueMax = +88.);
-#endif
+#include <M5GFX.h> 
+#include <WxData.h>
+#include <WxUI.h>
+#include "gfxfont.h"
 
 typedef int TFT_COLOUR;
 
-void WxWindDrawItem(const char *valueName,
+extern char *getHHMMSS(uint32_t utc);
+
+#if 0
+extern void WxWindDrawItem(const char *valueName,
                     TFT_COLOUR gfxColour, 
                     float value, 
                     float valueMin, 
                     float valueMax);
+#endif
+
+void WxWindDrawItem2(ITEM &item);
+
+#endif
 

@@ -1,14 +1,23 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <TFT_eSPI.h>   // TFT colour def
+
+typedef int TFT_COLOUR;
+
+#include "WxData.h"
 #include "WxUI.h"
 #include "WxWind.h"
 
 #include "_m5Core2-only.h"
 #include "_viewController.h"
+#include <Timezone.h>
 
 #include "pretty.h"
 
+
 TickType_t xMsgSysTick;
+
+extern void WxWindDrawItem2(ITEM &item);
 
 
 /* reference
@@ -52,10 +61,12 @@ void setup() {
 
 JsonDocument jsonDecoded;
 
-volatile float windSpeedCurrent = 1.0;
-volatile float windSpeedLo = 999;
-volatile float windSpeedHi = 0;
-volatile bool  bWindSpeedChanged = false;
+
+ITEM wind ("WIND", TFT_GREEN);
+ITEM rain ("RAIN", TFT_CYAN);
+ITEM temp ("TEMP", TFT_YELLOW);
+ITEM hmdt ("HMDT", TFT_BLUE);
+
 
 void json_433_Callback(char* jsonIn)
 {
@@ -64,22 +75,21 @@ void json_433_Callback(char* jsonIn)
 
   float windNow;
   windNow = jsonDecoded["wind_avg_km_h"];
-  
   uint16_t id = jsonDecoded["id"];
 
   static uint32_t lastTime = 0;
-  uint32_t now = millis();
-  uint32_t diff = now - lastTime;
+  uint32_t nw = millis();
+  uint32_t diff = nw - lastTime;
   // messages are sent 3 in a row. Look for time b/n the bursts.
-  diff > 10000 ? lastTime = now : 0;
+  diff > 10000 ? lastTime = nw : 0;
   
   
   switch (id)
   {
   	case 3870:
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
-  		Serial.printf(FG_GREEN "valid device detected\n\n" FG_DONE);
-  		Serial.printf(FG_YELLOW "hi don %f\n", windSpeedCurrent);
+  		Serial.printf(FG_GREEN "valid device detected win=%f \n\n" FG_DONE, windNow);
+  		Serial.printf(FG_YELLOW "hi don %f\n", wind.valueCurrent);
 
 		if (diff > 10000)
 		{
@@ -89,13 +99,25 @@ void json_433_Callback(char* jsonIn)
 		}
 
 		
-		if (windNow != windSpeedCurrent)
+		if (windNow != wind.valueCurrent)
 		{
-			windSpeedHi = windSpeedHi < windSpeedCurrent ? windSpeedCurrent: windSpeedHi;
-			windSpeedLo = windSpeedLo > windSpeedCurrent ? windSpeedCurrent: windSpeedLo;
-			windSpeedCurrent = windNow;
-			bWindSpeedChanged = true;
+			if (wind.valueHi < windNow)
+			{
+				wind.valueHi = windNow;
+				wind.timeHi = now();
+			}	
+			
+			if (wind.valueLo > windNow)
+			{
+				wind.valueLo = windNow;
+				wind.timeLo = now();
+			}				
+
   		}
+  		Serial.printf("%s and %s\n", getHHMMSS(wind.timeLo),  getHHMMSS(wind.timeHi));
+  		Serial.printf("%d and %d\n", wind.timeLo, wind.timeHi);
+		wind.valUpdated = true;
+		wind.valueCurrent = windNow;
   		
   	break;
 
@@ -109,14 +131,27 @@ void json_433_Callback(char* jsonIn)
 
 void task_WxUI(void *)
 {
+	wind.timeLo = now();    //test
+	delay(3000);		    //test
+	wind.timeHi = now();	//test
+
 	while(true)
 	{
-		if (bWindSpeedChanged)
+		if (wind.valUpdated)
 		{
-			bWindSpeedChanged = false;
+			wind.valUpdated = false;
 
-			WxWindDrawItem("WIND", TFT_GREEN, windSpeedCurrent, windSpeedLo, windSpeedHi);
- 			Serial.printf("WIND %.1f < %.1f < %.1f\n", windSpeedLo, windSpeedCurrent, windSpeedHi);
+			//WxWindDrawItem("WIND", TFT_GREEN, wind.valueCurrent, wind.valueLo, wind.valueHi);
+			WxWindDrawItem2(wind);
+
+			delay(2000);
+			WxWindDrawItem2(temp);
+			
+			delay(2000);
+			WxWindDrawItem2(rain);
+
+			delay(2000);
+ 			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
 		}
 		delay(500);
 	}
