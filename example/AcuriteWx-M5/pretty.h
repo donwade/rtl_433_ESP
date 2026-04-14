@@ -27,6 +27,7 @@
 #define FG_CYAN       "\033[0;36m"
 #define FG_WHITE      "\033[0;37m"
 
+
 // BRIGHT COLOUR
 #define FG_BRED        "\033[1;31m"
 #define FG_BGREEN      "\033[1;32m"
@@ -88,4 +89,8 @@
 #define BG_FMAGENTA    "\033[3;45m"
 #define BG_FCYAN       "\033[3;46m"
 #define BG_FWHITE      "\033[3;47m"
+
+#define RGBto565(r, g, b) (  ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3)) 
+#define RGB32toRGB565(c32) RGBto565( (c32>>16) & 0xFF , (c32>>8) & 0xFF, (c32) & 0xFF)
+
 

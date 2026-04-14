@@ -2,13 +2,14 @@
 #define _WXUI
 
 #include <M5GFX.h> 
-#include <WxData.h>
+#include <WxCommon.h>
 #include <WxUI.h>
 #include "gfxfont.h"
 
 typedef int TFT_COLOUR;
 
 extern char *getHHMMSS(uint32_t utc);
+extern unsigned long getUTC();
 
 #if 0
 extern void WxWindDrawItem(const char *valueName,

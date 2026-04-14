@@ -4,7 +4,7 @@
 
 typedef int TFT_COLOUR;
 
-#include "WxData.h"
+#include "WxCommon.h"
 #include "WxUI.h"
 #include "WxWind.h"
 
@@ -13,6 +13,7 @@ typedef int TFT_COLOUR;
 #include <Timezone.h>
 
 #include "pretty.h"
+#include <TFT_eSPI.h>
 
 
 TickType_t xMsgSysTick;
@@ -62,10 +63,10 @@ void setup() {
 JsonDocument jsonDecoded;
 
 
-ITEM wind ("WIND", TFT_GREEN);
-ITEM rain ("RAIN", TFT_CYAN);
-ITEM temp ("TEMP", TFT_YELLOW);
-ITEM hmdt ("HMDT", TFT_BLUE);
+ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
+ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
+ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
+ITEM hmdt ("HMDT", RGB32toRGB565(0xFF00FF));
 
 
 void json_433_Callback(char* jsonIn)
@@ -104,13 +105,13 @@ void json_433_Callback(char* jsonIn)
 			if (wind.valueHi < windNow)
 			{
 				wind.valueHi = windNow;
-				wind.timeHi = now();
+				wind.timeHi = getUTC();
 			}	
 			
 			if (wind.valueLo > windNow)
 			{
 				wind.valueLo = windNow;
-				wind.timeLo = now();
+				wind.timeLo = getUTC();
 			}				
 
   		}
@@ -141,17 +142,17 @@ void task_WxUI(void *)
 		{
 			wind.valUpdated = false;
 
-			//WxWindDrawItem("WIND", TFT_GREEN, wind.valueCurrent, wind.valueLo, wind.valueHi);
 			WxWindDrawItem2(wind);
-
-			delay(2000);
-			WxWindDrawItem2(temp);
-			
-			delay(2000);
-			WxWindDrawItem2(rain);
-
-			delay(2000);
  			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
+			delay(2000);
+			
+			//WxWindDrawItem2(temp);
+ 			//Serial.printf("TEMP %.1f < %.1f < %.1f\n", temp.valueLo, temp.valueCurrent, temp.valueHi);
+			//delay(2000);
+
+			//WxWindDrawItem2(rain);
+ 			//Serial.printf("RAIN %.1f < %.1f < %.1f\n", rain.valueLo, rain.valueCurrent, rain.valueHi);
+			//delay(2000);
 		}
 		delay(500);
 	}

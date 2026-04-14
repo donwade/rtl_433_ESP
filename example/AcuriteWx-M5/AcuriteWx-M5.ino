@@ -10,7 +10,7 @@
 #include "WxUI.h"
 #include "_m5Core2-only.h"
 #include "WxWind.h"
-
+#include "pretty.h"
 
 #ifndef RF_MODULE_FREQUENCY
 #  define RF_MODULE_FREQUENCY 433.92
@@ -51,12 +51,23 @@ void logJson(JsonDocument jsondata) {
 
 void setup() {
 
+  Serial.begin(921600);
   setup_WxUI();
 
  
   //WxWindDrawWind(37, 45);  // 123kph from 45deg
   //WxWindDrawItem("Wind", TFT_GREEN, 10, -1., +100.);
   delay(4000);
+
+  M5.Lcd.fillScreen(RED);
+  delay(1000);
+  M5.Lcd.fillScreen(GREEN);
+  delay(1000);
+  M5.Lcd.fillScreen(BLUE);
+  delay(1000);
+  Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RED, GREEN, BLUE);
+  Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RGBto565(0xFF,0,0), RGBto565(0, 0xFF,0), RGBto565(0, 0,0xFF));
+  
 
 #ifndef LOG_LEVEL
   LOG_LEVEL_SILENT

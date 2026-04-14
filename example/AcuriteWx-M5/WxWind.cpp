@@ -5,7 +5,9 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 #include <rtl_433_ESP.h>
+#include "pretty.h"
 
+#include "WxCommon.h"
 #include "WxWind.h"
 #include "WxUI.h"
 #include "_m5Core2-only.h"
@@ -24,15 +26,16 @@ TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};	// UTC - 5 hours
 #define UNITS_FONT &fonts::FreeSansBold9pt7b
 #define STATS_FONT &fonts::FreeMono12pt7b
 
+
 char *getHHMMSS(uint32_t utc)
 {
 	static char msg[70];
 	Timezone usEastern(usEDT, usEST);
 
     time_t local = usEastern.toLocal(utc);
-    Serial.printf(msg,"************* %02d:%02d:%02d", hour(local), minute(local), second(local));
+    Serial.printf("************* %02d:%02d:%02d\n", hour(local), minute(local), second(local));
     
-    sprintf(msg,"%02d:%02d", minute(local), second(local));
+    sprintf(msg,"%d:%02d:%02d", hour(local), minute(local), second(local));
 	return msg;
 }
 
@@ -46,22 +49,39 @@ void WxWindDrawItem2(ITEM &item)
 	uint32_t foregnd;
 	uint32_t backgnd;
 	char msg[300];
-	
-	if ( item.valueCurrent < item.valueHi && item.valueCurrent > item.valueLo)
+
+	// don't make 0 seem as a record. windspeed == 0 
+	if ( item.valueCurrent == 0 || (item.valueCurrent < item.valueHi && item.valueCurrent > item.valueLo))
 	{
 		foregnd = item.valueColour;
 		backgnd = BLACK;
+		M5.Lcd.clear();
 	}
 	else
 	{
 		// Setting a record !!!!
-		foregnd = WHITE;
-		backgnd = item.valueColour;
+		foregnd = BLACK;
+		backgnd=  item.valueColour;
+		M5.Lcd.fillScreen(backgnd); // Clear screen
 	}
 
-    M5.Lcd.fillScreen(backgnd); // Clear screen
+/*	
+	M5.Lcd.fillScreen(BLUE);
+	delay(1000);
+	M5.Lcd.fillScreen(RED);
+	delay(1000);
+	M5.Lcd.fillScreen(GREEN);
+	delay(1000);
+	Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RED, GREEN, BLUE);
+	Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RGBto565(0xFF,0,0), RGBto565(0, 0xFF,0), RGBto565(0, 0,0xFF));
+*/	
+
+	Serial.printf("%s \n" , getHHMMSS(getUTC()));
 
 
+	Serial.printf("\tbackground = 0x%04X\n", backgnd);
+	Serial.printf("\tforegound = 0x%04X\n", foregnd);
+	
     // Get dimensions
     uint16_t screenWidth = M5.Lcd.width()-1;
     uint16_t screenHeight = M5.Lcd.height()-1;
@@ -70,20 +90,20 @@ void WxWindDrawItem2(ITEM &item)
     //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius, CYAN);
     //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius - 8, BLACK);
 
-	M5.Lcd.setTextColor(foregnd, backgnd);
+
 	M5.Lcd.setTextSize(1);
 
 	//M5.Lcd.setFont(STATS_FONT);
+
+	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
 	sprintf(msg, "MIN=%.1f", item.valueLo);
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK, STATS_FONT);	//set left edge of text
 
 	M5.Lcd.setTextDatum(TC_DATUM);  // center on X
-	sprintf(msg, "TODAY", item.valueLo);
-	M5.Lcd.drawString(msg, screenWidth/2, BTWEAK, STATS_FONT); 
+	M5.Lcd.drawString("NOW", screenWidth/2, BTWEAK, STATS_FONT); 
 
-	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
  	sprintf(msg, "MAX=%.1f", item.valueHi);
