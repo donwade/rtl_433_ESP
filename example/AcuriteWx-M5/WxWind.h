@@ -21,7 +21,7 @@ extern void WxWindDrawItem(const char *valueName,
                     float valueMax);
 #endif
 
-void WxDrawWindDisplay(ITEM &item);
+void WxDrawWindDisplay(WIND_ITEM &item);
 
 #endif
 

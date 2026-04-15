@@ -41,8 +41,6 @@ char *getHHMMSS(uint32_t utc)
 	//https://www.geeksforgeeks.org/cpp/strftime-function-in-c/
 
 	strftime(msg, sizeof(msg), "%I:%M%p", remote);
-	Serial.printf("skskskssk %s\n", msg);
-
 	return msg;
 }
 
@@ -60,16 +58,15 @@ char *getDDMMYY(uint32_t utc)
 	//https://www.geeksforgeeks.org/cpp/strftime-function-in-c/
 
 	strftime(msg, sizeof(msg), "%d/%b/%y", remote);
-	Serial.printf("skskskssk %s\n", msg);
-
 	return msg;
 }
 
 #define BTWEAK  6 // boarder tweak, keep text off edges.
+#define VSPACE  6
 
-void WxDrawWindDisplay(ITEM &item)
+void WxDrawWindDisplay(WIND_ITEM &item)
 {
-	uint16_t cHeight1;
+	uint16_t cHeight1 = 0;
 
 	uint32_t foregnd;
 	uint32_t backgnd;
@@ -122,6 +119,7 @@ void WxDrawWindDisplay(ITEM &item)
 
 	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
+	//------------ vals -----------------
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
 	sprintf(msg, "MIN=%.1f", item.valueLo);
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK, STATS_FONT);	//set left edge of text
@@ -134,8 +132,9 @@ void WxDrawWindDisplay(ITEM &item)
  	sprintf(msg, "MAX=%.1f", item.valueHi);
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK, STATS_FONT); //set right edge of text
 
-	//-----------------------------
-	cHeight1 = M5.Lcd.fontHeight(STATS_FONT);
+	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
+	
+	//-------------- time ---------------
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
 	sprintf(msg, "%s", getHHMMSS(item.timeLo));
@@ -145,8 +144,22 @@ void WxDrawWindDisplay(ITEM &item)
 	sprintf(msg, "%s", getHHMMSS(item.timeHi));
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
 
+	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 	
+	//-------------- date ---------------
+
+	M5.Lcd.setTextDatum(TL_DATUM);  // top left
+	sprintf(msg, "%s", getDDMMYY(item.timeLo));
+	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
+	
+	M5.Lcd.setTextDatum(TR_DATUM);  // top right
+	sprintf(msg, "%s", getDDMMYY(item.timeHi));
+	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
+
+	cHeight1 += M5.Lcd.fontHeight(STATS_FONT);
+
 	//-----------------------------
+
 	M5.Lcd.setTextDatum(TC_DATUM);  // Centre text on x,y position
 
 	//https://m5stack.lang-ship.com/howto/m5gfx/font/   //TIP
@@ -158,7 +171,6 @@ void WxDrawWindDisplay(ITEM &item)
 	else
 		sprintf(msg, "%2d", (int) item.valueCurrent);
 		
-	cHeight1 = M5.Lcd.fontHeight(VALUE_FONT);
 
 	// show value	 
 	M5.Lcd.drawString(
@@ -166,6 +178,7 @@ void WxDrawWindDisplay(ITEM &item)
 		 screenWidth/2, screenHeight/2- cHeight1/2,
 		 VALUE_FONT);
 
+	cHeight1 += M5.Lcd.fontHeight(VALUE_FONT) + VSPACE;
 	//-----------------------------
 
 	// show units
@@ -173,7 +186,6 @@ void WxDrawWindDisplay(ITEM &item)
 
 	M5.Lcd.setTextSize(2);
 
-	uint16_t cHeight2 = M5.Lcd.fontHeight(UNITS_FONT);
 
 	// !!! draw string is NOT subject to set cursor.
 	//     drawing a string is not the same as printing a string
@@ -181,16 +193,15 @@ void WxDrawWindDisplay(ITEM &item)
 
 	M5.Lcd.drawString(
 		item.valueName, 
-		screenWidth/2, screenHeight/2 + cHeight1/2 - cHeight2/2,
+		screenWidth/2, cHeight1,
 		 UNITS_FONT);
 
 	M5.Lcd.display();
 
 }
 
-#define VSPACE 6
 
-void WxDrawRainDisplay(ITEM &item)
+void WxDrawRainDisplay(RAIN_ITEM &item)
 {
 	uint16_t cHeight1;
 
@@ -198,21 +209,12 @@ void WxDrawRainDisplay(ITEM &item)
 	uint32_t backgnd;
 	char msg[300];
 
-	// don't make 0 seem as a record. windspeed == 0 
-	if ( item.valueCurrent == 0 || (item.valueCurrent < item.valueHi && item.valueCurrent > item.valueLo))
-	{
-		foregnd = item.valueColour;
-		backgnd = BLACK;
-		M5.Lcd.clear();
-	}
-	else
-	{
-		// Setting a record !!!!
-		foregnd = BLACK;
-		backgnd=  item.valueColour;
-		M5.Lcd.fillScreen(backgnd); // Clear screen
-	}
+	foregnd = item.bValueChanged ? RED : item.valueColour;
+	backgnd = BLACK;
+	M5.Lcd.clear();
 
+	M5.Lcd.fillScreen(backgnd);
+ 
 /*	
 	M5.Lcd.fillScreen(BLUE);
 	delay(1000);
@@ -246,7 +248,7 @@ void WxDrawRainDisplay(ITEM &item)
 	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "LAST=%.1f", item.valueLo);
+	sprintf(msg, "LAST=%.1f", item.oldRainfall);
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK, STATS_FONT);	//set left edge of text
 
 	//M5.Lcd.setTextDatum(TC_DATUM);  // center on X
@@ -254,35 +256,35 @@ void WxDrawRainDisplay(ITEM &item)
 
 
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
- 	sprintf(msg, "TOTAL=%.1f", item.valueHi);
+ 	sprintf(msg, "TOTAL=%.1f", item.valueSeenOnBoot);
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK, STATS_FONT); //set right edge of text
 
 	//-------time -----------------
 	cHeight1 = M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getDDMMYY(item.timeLo));
+	sprintf(msg, "%s", getDDMMYY(item.timeNow));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
-	M5.Lcd.setTextDatum(TR_DATUM);  // top right
-	sprintf(msg, "%s", getDDMMYY(item.timeHi));
-	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
+	//M5.Lcd.setTextDatum(TR_DATUM);  // top right
+	//sprintf(msg, "%s", getDDMMYY(item.timeHi));
+	//M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
 
 	
 	//------- date ----------------
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getHHMMSS(item.timeLo));
+	sprintf(msg, "%s", getHHMMSS(item.timeNow));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
-	M5.Lcd.setTextDatum(TR_DATUM);  // top right
-	sprintf(msg, "%s", getHHMMSS(item.timeHi));
-	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
-
+	//M5.Lcd.setTextDatum(TR_DATUM);  // top right
+	//sprintf(msg, "%s", getHHMMSS(item.timeHi));
+	//M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
 	
-	//-----------------------------
-	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE *2;
+	//--------- value --------------------
+	
+	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TC_DATUM);  // Centre text on x,y position
 
@@ -290,12 +292,11 @@ void WxDrawRainDisplay(ITEM &item)
 	M5.Lcd.setTextSize(3);
 	//M5.Lcd.setFont(VALUE_FONT);
 
-	if (item.valueCurrent < 10.0)
-		sprintf(msg, "%.1f", item.valueCurrent);
-	else
-		sprintf(msg, "%2d", (int) item.valueCurrent);
+	sprintf(msg, "%.1f", item.oldRainfall);
 		
 	//cHeight1 += M5.Lcd.fontHeight(VALUE_FONT) /2;
+
+	M5.Lcd.setTextColor(foregnd , backgnd);
 
 	// show value	 
 	M5.Lcd.drawString(

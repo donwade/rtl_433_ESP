@@ -7,11 +7,11 @@
 
 extern char *getHHMMSS(uint32_t utc);
 
-class ITEM{
+class WIND_ITEM{
 public:
-     ITEM() { assert(0);};
+     WIND_ITEM() { assert(0);};
 
-     ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), valUpdated(false), valueColour(colour)
+     WIND_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), valUpdated(false), valueColour(colour)
      {
         strcpy(valueName, name);
      };
@@ -27,6 +27,35 @@ public:
      uint32_t timeHi;
 
 	 bool  valUpdated;
+};
+
+
+
+class RAIN_ITEM{
+public:
+     RAIN_ITEM() { assert(0);};
+
+     RAIN_ITEM(const char *name, uint32_t colour): valueNow(99), bValueChanged(false), valueColour(colour)
+     {
+        strcpy(valueName, name);
+        oldRainfall = 0;
+        valueSeenOnBoot = 0;
+
+     };
+
+     uint32_t valueColour;
+      char valueName [30];
+
+     float valueSeenOnBoot;
+     float oldRainfall;
+
+     float valueNow;
+     uint32_t timeNow;
+
+//     float valueHi;
+//     uint32_t timeHi;
+
+	 bool  bValueChanged;
 };
 
 extern unsigned long getUTC();

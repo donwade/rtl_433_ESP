@@ -18,8 +18,8 @@ typedef int TFT_COLOUR;
 
 TickType_t xMsgSysTick;
 
-extern void WxDrawWindDisplay(ITEM &item);
-extern void WxDrawRainDisplay(ITEM &item);
+extern void WxDrawWindDisplay(WIND_ITEM &item);
+extern void WxDrawRainDisplay(RAIN_ITEM &item);
 
 
 
@@ -65,10 +65,11 @@ void setup() {
 JsonDocument jsonDecoded;
 
 
-ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
-ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
-ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
-ITEM hmdt ("HMDT", RGB32toRGB565(0xFF00FF));
+WIND_ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
+RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
+
+WIND_ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
+WIND_ITEM hmdt ("HMDT", RGB32toRGB565(0xFF00FF));
 
 
 void json_433_Callback(char* jsonIn)
@@ -86,7 +87,6 @@ void json_433_Callback(char* jsonIn)
 
   float windNow;
   float rainNow;
-  static float rainFirstSeen = 0;
 
   uint16_t id = jsonDecoded["id"];
   
@@ -98,23 +98,23 @@ void json_433_Callback(char* jsonIn)
 		windNow = jsonDecoded["wind_avg_km_h"];
 		rainNow = jsonDecoded["rain_mm"];
 
-		if (!rainFirstSeen)
+		// lock in absolute total rain that the tower has.
+		if (!rain.valueSeenOnBoot && rainNow)
 		{
-			rainFirstSeen = rainNow;
-			Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainFirstSeen);
+			rain.valueSeenOnBoot = rainNow;
+			Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainNow);
 		}
 		
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
-  		Serial.printf(FG_GREEN "Wind =%.1f \n" FG_DONE, windNow);
+		
 
-		// if (diff > 10000)
-		{
-			xMsgSysTick = xTaskGetTickCount();
-			Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, 
-					diff, xMsgSysTick);
-		}
+		// retrigger 18 second wait window
+		xMsgSysTick = xTaskGetTickCount();
+		Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, 
+				diff, xMsgSysTick);
 
 		
+  		Serial.printf(FG_GREEN "Wind =%.1f \n" FG_DONE, windNow);
 		if (windNow != wind.valueCurrent)
 		{
 			if (wind.valueHi < windNow)
@@ -135,30 +135,36 @@ void json_433_Callback(char* jsonIn)
 		wind.valUpdated = true;
 		wind.valueCurrent = windNow;
 
-	if (rainFirstSeen && rainNow)  // not all messages have rain
-	{
-		// message has a rain component 
-		float diffRain = rainNow - rainFirstSeen;
-		Serial.printf("diff rain = %f\n", diffRain);
+		// rain ---------------------------------------------------------------
+		static int injectRain = 0;
+		// testing if (injectRain < 80) injectRain+=10;
 		
- 		{
-			//if (rain.valueLo < diffRain)
+		rainNow = rain.valueSeenOnBoot + injectRain;   // testing
+		
+		if (rain.valueSeenOnBoot && rainNow)  // not all messages have rain
+		{
+			// message has a rain component 
+			float rainfallNow = rainNow - rain.valueSeenOnBoot;
+			Serial.printf("diff rain = %f\n", rainfallNow);
+
+			if (rainfallNow != rain.oldRainfall) 	// 
+	 		{
+				rain.valueNow = rainfallNow;
+				rain.timeNow= getUTC();
+				rain.oldRainfall = rainfallNow;
+				Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+				rain.bValueChanged = true;
+			}
+			else
 			{
-				rain.valueLo = diffRain;
-				rain.timeLo= getUTC();
-			}	
-			rain.valueHi = rainNow;
-			rain.timeHi= getUTC();
-	
- 		}
- 		
-		Serial.printf("last rain time %s \n", getHHMMSS(rain.timeLo));
-		Serial.printf("%f ... now=%f mm and total %f mm\n", diffRain, rain.valueLo, rain.valueHi);
-		
-		rain.valUpdated = true;
-		rain.valueCurrent = diffRain;
-		
-	}
+				// it reported a rain event but amount did not change.
+				// TODO averaging.
+				Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+			}
+ 	 		
+			rain.bValueChanged = true;
+			
+		}
   		
   	break;
 
@@ -191,7 +197,7 @@ void task_WxUI(void *)
 			//delay(2000);
 
 			WxDrawRainDisplay(rain);
- 			Serial.printf("RAIN %.1f < %.1f < %.1f\n", rain.valueLo, rain.valueCurrent, rain.valueHi);
+ 			Serial.printf("RAIN %.1f\n", rain.valueNow );
 			delay(2000);
 		}
 		delay(500);
