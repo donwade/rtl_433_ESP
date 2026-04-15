@@ -142,12 +142,13 @@ void json_433_Callback(char* jsonIn)
 		Serial.printf("diff rain = %f\n", diffRain);
 		
  		{
-			if (rain.valueLo < diffRain)
+			//if (rain.valueLo < diffRain)
 			{
 				rain.valueLo = diffRain;
 				rain.timeLo= getUTC();
 			}	
 			rain.valueHi = rainNow;
+			rain.timeHi= getUTC();
 	
  		}
  		
