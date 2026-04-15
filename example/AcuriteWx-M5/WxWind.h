@@ -8,8 +8,10 @@
 
 typedef int TFT_COLOUR;
 
-extern char *getHHMMSS(uint32_t utc);
 extern unsigned long getUTC();
+extern char *getHHMMSS(uint32_t utc);
+extern char *getDDMMYY(uint32_t utc);
+
 
 #if 0
 extern void WxWindDrawItem(const char *valueName,
@@ -19,7 +21,7 @@ extern void WxWindDrawItem(const char *valueName,
                     float valueMax);
 #endif
 
-void WxWindDrawItem2(ITEM &item);
+void WxDrawWindDisplay(ITEM &item);
 
 #endif
 

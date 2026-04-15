@@ -18,7 +18,9 @@ typedef int TFT_COLOUR;
 
 TickType_t xMsgSysTick;
 
-extern void WxWindDrawItem2(ITEM &item);
+extern void WxDrawWindDisplay(ITEM &item);
+extern void WxDrawRainDisplay(ITEM &item);
+
 
 
 /* reference
@@ -74,25 +76,38 @@ void json_433_Callback(char* jsonIn)
    deserializeJson(jsonDecoded,jsonIn);
   //logJson(jsonDecoded);
 
-  float windNow;
-  windNow = jsonDecoded["wind_avg_km_h"];
-  uint16_t id = jsonDecoded["id"];
 
   static uint32_t lastTime = 0;
   uint32_t nw = millis();
   uint32_t diff = nw - lastTime;
   // messages are sent 3 in a row. Look for time b/n the bursts.
-  diff > 10000 ? lastTime = nw : 0;
-  
+  //diff > 10000 ? lastTime = nw : 0;
+
+
+  float windNow;
+  float rainNow;
+  static float rainFirstSeen = 0;
+
+  uint16_t id = jsonDecoded["id"];
   
   switch (id)
   {
   	case 3870:
-		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
-  		Serial.printf(FG_GREEN "valid device detected win=%f \n\n" FG_DONE, windNow);
-  		Serial.printf(FG_YELLOW "hi don %f\n", wind.valueCurrent);
 
-		if (diff > 10000)
+  	
+		windNow = jsonDecoded["wind_avg_km_h"];
+		rainNow = jsonDecoded["rain_mm"];
+
+		if (!rainFirstSeen)
+		{
+			rainFirstSeen = rainNow;
+			Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainFirstSeen);
+		}
+		
+		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
+  		Serial.printf(FG_GREEN "Wind =%.1f \n" FG_DONE, windNow);
+
+		// if (diff > 10000)
 		{
 			xMsgSysTick = xTaskGetTickCount();
 			Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, 
@@ -119,6 +134,30 @@ void json_433_Callback(char* jsonIn)
   		Serial.printf("%d and %d\n", wind.timeLo, wind.timeHi);
 		wind.valUpdated = true;
 		wind.valueCurrent = windNow;
+
+	if (rainFirstSeen && rainNow)  // not all messages have rain
+	{
+		// message has a rain component 
+		float diffRain = rainNow - rainFirstSeen;
+		Serial.printf("diff rain = %f\n", diffRain);
+		
+ 		{
+			if (rain.valueLo < diffRain)
+			{
+				rain.valueLo = diffRain;
+				rain.timeLo= getUTC();
+			}	
+			rain.valueHi = rainNow;
+	
+ 		}
+ 		
+		Serial.printf("last rain time %s \n", getHHMMSS(rain.timeLo));
+		Serial.printf("%f ... now=%f mm and total %f mm\n", diffRain, rain.valueLo, rain.valueHi);
+		
+		rain.valUpdated = true;
+		rain.valueCurrent = diffRain;
+		
+	}
   		
   	break;
 
@@ -142,17 +181,17 @@ void task_WxUI(void *)
 		{
 			wind.valUpdated = false;
 
-			WxWindDrawItem2(wind);
+			WxDrawWindDisplay(wind);
  			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
 			delay(2000);
 			
-			//WxWindDrawItem2(temp);
+			//WxDrawWindDisplay(temp);
  			//Serial.printf("TEMP %.1f < %.1f < %.1f\n", temp.valueLo, temp.valueCurrent, temp.valueHi);
 			//delay(2000);
 
-			//WxWindDrawItem2(rain);
- 			//Serial.printf("RAIN %.1f < %.1f < %.1f\n", rain.valueLo, rain.valueCurrent, rain.valueHi);
-			//delay(2000);
+			WxDrawRainDisplay(rain);
+ 			Serial.printf("RAIN %.1f < %.1f < %.1f\n", rain.valueLo, rain.valueCurrent, rain.valueHi);
+			delay(2000);
 		}
 		delay(500);
 	}
