@@ -12,6 +12,8 @@
 #include "WxWind.h"
 #include "pretty.h"
 
+#include "FatFS.h"
+
 #ifndef RF_MODULE_FREQUENCY
 #  define RF_MODULE_FREQUENCY 433.92
 #endif
@@ -52,6 +54,8 @@ void logJson(JsonDocument jsondata) {
 void setup() {
 
   Serial.begin(921600);
+  setup_FAT();
+  
   setup_WxUI();
 
  
