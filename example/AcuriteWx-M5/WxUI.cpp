@@ -87,7 +87,7 @@ void json_433_Callback(char* jsonIn)
 
   float tempNow;
   float windNow;
-  float rainNow;
+  float rainAbs;
 
   bool bHasTemp;
   bool bHasWind;
@@ -180,25 +180,25 @@ void json_433_Callback(char* jsonIn)
 		
 		if (bHasRain)
 		{
-			rainNow = jsonDecoded["rain_mm"];
+			rainAbs = jsonDecoded["rain_mm"];
 		
 			// lock in absolute total rain that the tower has.
-			if (!rain.valueSeenOnBoot && rainNow)
+			if (!rain.valueSeenOnBoot && rainAbs)
 			{
-				rain.valueSeenOnBoot = rainNow;
-				Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainNow);
+				rain.valueSeenOnBoot = rainAbs;
+				Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainAbs);
 			}
 			
 			static int injectRain = 0;
 			// testing if (injectRain < 80) injectRain+=10;
 			
-			rainNow = rain.valueSeenOnBoot + injectRain;   // testing
+			rainAbs = rain.valueSeenOnBoot + injectRain;   // testing
 			
-			if (rain.valueSeenOnBoot && rainNow)  // not all messages have rain
+			if (rain.valueSeenOnBoot && rainAbs)  // not all messages have rain
 			{
 				// message has a rain component 
-				float rainfallNow = rainNow - rain.valueSeenOnBoot;
-				Serial.printf("diff rain = %f\n", rainfallNow);
+				float rainfallNow = rainAbs - rain.valueSeenOnBoot;
+				Serial.printf("abs rain = %f   diff rain = %f\n", rainAbs,  rainfallNow);
 			
 				if (rainfallNow != rain.oldRainfall)	// 
 				{

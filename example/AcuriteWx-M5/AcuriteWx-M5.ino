@@ -12,7 +12,7 @@
 #include "WxWind.h"
 #include "pretty.h"
 
-#include "FatFS.h"
+#include "JsonIO.h"
 
 #ifndef RF_MODULE_FREQUENCY
 #  define RF_MODULE_FREQUENCY 433.92
@@ -25,6 +25,7 @@ char messageBuffer[JSON_MSG_BUFFER];
 rtl_433_ESP rf; // use -1 to disable transmitter
 
 int count = 0;
+//-------------------------------------------------------------
 
 void rtl_433_Callback(char* message) {
   JsonDocument jsonDocument;
@@ -34,6 +35,7 @@ void rtl_433_Callback(char* message) {
   count++;
 }
 
+//-------------------------------------------------------------
 void logJson(JsonDocument jsondata) {
 #if defined(ESP8266) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
   char JSONmessageBuffer[measureJson(jsondata) + 1];
@@ -42,6 +44,7 @@ void logJson(JsonDocument jsondata) {
   char JSONmessageBuffer[JSON_MSG_BUFFER];
   serializeJson(jsondata, JSONmessageBuffer, JSON_MSG_BUFFER);
 #endif
+
 #if defined(setBitrate) || defined(setFreqDev) || defined(setRxBW)
   Log.setShowLevel(false);
   Log.notice(F("."));
@@ -51,28 +54,11 @@ void logJson(JsonDocument jsondata) {
 #endif
 }
 
+//-------------------------------------------------------------
 void setup() {
 
-  Serial.begin(921600);
-  setup_FAT();
+ setup_WxUI();	// claim any SPI devs now
   
-  setup_WxUI();
-
- 
-  //WxWindDrawWind(37, 45);  // 123kph from 45deg
-  //WxWindDrawItem("Wind", TFT_GREEN, 10, -1., +100.);
-  delay(4000);
-
-  M5.Lcd.fillScreen(RED);
-  delay(1000);
-  M5.Lcd.fillScreen(GREEN);
-  delay(1000);
-  M5.Lcd.fillScreen(BLUE);
-  delay(1000);
-  Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RED, GREEN, BLUE);
-  Serial.printf("RED = 0x%X GREEN=0x%X BLUE=0x%X\n", RGBto565(0xFF,0,0), RGBto565(0, 0xFF,0), RGBto565(0, 0,0xFF));
-  
-
 #ifndef LOG_LEVEL
   LOG_LEVEL_SILENT
 #endif
@@ -84,8 +70,12 @@ void setup() {
   rf.enableReceiver();
   Log.notice(F("****** setup complete ******" CR));
   rf.getModuleStatus();
+
+  _setup_SD();			// SD AFTER all SPI claims (LORA etc)  are done.
+  writeJsonToSD();
 }
 
+//-------------------------------------------------------------
 unsigned long uptime() {
   static unsigned long lastUptime = 0;
   static unsigned long uptimeAdd = 0;
@@ -100,6 +90,7 @@ unsigned long uptime() {
 
 int next = uptime() + 30;
 
+//-------------------------------------------------------------
 #if defined(setBitrate)
     #error HI THERE
 #endif
@@ -143,12 +134,14 @@ int next = uptime() + 30;
     float step = stepMin;
 #endif
 
+//-------------------------------------------------------------
 void loop() 
 {
 
   _loop_M5();
-
   rf.loop();
+
+  // this is for auto-step tweaking. currently not used but interesting
 #if defined(setBitrate) || defined(setFreqDev) || defined(setRxBW)
   char stepPrint[8];
   if (uptime() > next) {
