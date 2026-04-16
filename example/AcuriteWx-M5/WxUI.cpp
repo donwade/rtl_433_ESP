@@ -20,6 +20,7 @@ TickType_t xMsgSysTick;
 
 extern void WxDrawWindDisplay(WIND_ITEM &item);
 extern void WxDrawRainDisplay(RAIN_ITEM &item);
+extern void WxDrawTempDisplay(TEMP_ITEM &item);
 
 
 
@@ -68,7 +69,7 @@ JsonDocument jsonDecoded;
 WIND_ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
 RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
 
-WIND_ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
+TEMP_ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
 WIND_ITEM hmdt ("HMDT", RGB32toRGB565(0xFF00FF));
 
 
@@ -84,9 +85,13 @@ void json_433_Callback(char* jsonIn)
   // messages are sent 3 in a row. Look for time b/n the bursts.
   //diff > 10000 ? lastTime = nw : 0;
 
-
+  float tempNow;
   float windNow;
   float rainNow;
+
+  bool bHasTemp;
+  bool bHasWind;
+  bool bHasRain;
 
   uint16_t id = jsonDecoded["id"];
   
@@ -94,77 +99,127 @@ void json_433_Callback(char* jsonIn)
   {
   	case 3870:
 
-  	
-		windNow = jsonDecoded["wind_avg_km_h"];
-		rainNow = jsonDecoded["rain_mm"];
+		// retrigger 18 second wait window
+		xMsgSysTick = xTaskGetTickCount();
+		Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, diff, xMsgSysTick);
 
-		// lock in absolute total rain that the tower has.
-		if (!rain.valueSeenOnBoot && rainNow)
-		{
-			rain.valueSeenOnBoot = rainNow;
-			Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainNow);
-		}
-		
+		// not all fields are always populated.
+		// https://arduinojson.org/v6/api/jsonobject/containskey/
+
+		bHasTemp= jsonDecoded.containsKey("temperature_C");
+		bHasWind = jsonDecoded.containsKey("wind_avg_km_h");
+		bHasRain = jsonDecoded.containsKey("rain_mm");
+  	
+
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
 		
 
-		// retrigger 18 second wait window
-		xMsgSysTick = xTaskGetTickCount();
-		Serial.printf(FG_RED "last report time = %d mS  tickCount=%d\n" FG_DONE, 
-				diff, xMsgSysTick);
+		// wind ---------------------------------------------------------------
 
-		
-  		Serial.printf(FG_GREEN "Wind =%.1f \n" FG_DONE, windNow);
-		if (windNow != wind.valueCurrent)
+		if (bHasWind)
 		{
-			if (wind.valueHi < windNow)
-			{
-				wind.valueHi = windNow;
-				wind.timeHi = getUTC();
-			}	
+			windNow = jsonDecoded["wind_avg_km_h"];
 			
-			if (wind.valueLo > windNow)
+	  		Serial.printf(FG_GREEN "Wind =%.1f \n" FG_DONE, windNow);
+			if (windNow != wind.valueCurrent)
 			{
-				wind.valueLo = windNow;
-				wind.timeLo = getUTC();
-			}				
+				if (wind.valueHi < windNow)
+				{
+					wind.valueHi = windNow;
+					wind.timeHi = getUTC();
+				}	
+				
+				if (wind.valueLo > windNow)
+				{
+					wind.valueLo = windNow;
+					wind.timeLo = getUTC();
+				}				
 
-  		}
-  		Serial.printf("%s and %s\n", getHHMMSS(wind.timeLo),  getHHMMSS(wind.timeHi));
-  		Serial.printf("%d and %d\n", wind.timeLo, wind.timeHi);
-		wind.valUpdated = true;
-		wind.valueCurrent = windNow;
+	  		}
 
-		// rain ---------------------------------------------------------------
-		static int injectRain = 0;
-		// testing if (injectRain < 80) injectRain+=10;
-		
-		rainNow = rain.valueSeenOnBoot + injectRain;   // testing
-		
-		if (rain.valueSeenOnBoot && rainNow)  // not all messages have rain
-		{
-			// message has a rain component 
-			float rainfallNow = rainNow - rain.valueSeenOnBoot;
-			Serial.printf("diff rain = %f\n", rainfallNow);
+	  		Serial.printf("wind lo: %1.f kph at %s\n", wind.valueLo, getHHMMSS(wind.timeLo));
+	  		Serial.printf("wind hi: %1.f kph at %s\n", wind.valueHi, getHHMMSS(wind.timeHi));
+	  		
+			wind.valUpdated = true;
+			wind.valueCurrent = windNow;
 
-			if (rainfallNow != rain.oldRainfall) 	// 
-	 		{
-				rain.valueNow = rainfallNow;
-				rain.timeNow= getUTC();
-				rain.oldRainfall = rainfallNow;
-				Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
-				rain.bValueChanged = true;
-			}
-			else
-			{
-				// it reported a rain event but amount did not change.
-				// TODO averaging.
-				Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
-			}
- 	 		
-			rain.bValueChanged = true;
-			
 		}
+
+		// temperature ---------------------------------------------------------------
+
+		if (bHasTemp)
+		{
+			tempNow = jsonDecoded["temperature_C"];
+			
+	  		Serial.printf(FG_GREEN "temp =%.1f \n" FG_DONE, tempNow);
+			if (tempNow != temp.valueCurrent)
+			{
+				if (temp.valueHi < tempNow)
+				{
+					temp.valueHi = tempNow;
+					temp.timeHi = getUTC();
+				}	
+				
+				if (temp.valueLo > tempNow)
+				{
+					temp.valueLo = tempNow;
+					temp.timeLo = getUTC();
+				}				
+
+	  		}
+
+	  		Serial.printf("temp lo: %1.fC at %s\n", temp.valueLo, getHHMMSS(temp.timeLo));
+	  		Serial.printf("temp hi: %1.fC at %s\n", temp.valueHi, getHHMMSS(temp.timeHi));
+
+			temp.valUpdated = true;
+			temp.valueCurrent = tempNow;
+
+		}
+		
+		// rain ---------------------------------------------------------------
+		
+		if (bHasRain)
+		{
+			rainNow = jsonDecoded["rain_mm"];
+		
+			// lock in absolute total rain that the tower has.
+			if (!rain.valueSeenOnBoot && rainNow)
+			{
+				rain.valueSeenOnBoot = rainNow;
+				Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainNow);
+			}
+			
+			static int injectRain = 0;
+			// testing if (injectRain < 80) injectRain+=10;
+			
+			rainNow = rain.valueSeenOnBoot + injectRain;   // testing
+			
+			if (rain.valueSeenOnBoot && rainNow)  // not all messages have rain
+			{
+				// message has a rain component 
+				float rainfallNow = rainNow - rain.valueSeenOnBoot;
+				Serial.printf("diff rain = %f\n", rainfallNow);
+			
+				if (rainfallNow != rain.oldRainfall)	// 
+				{
+					rain.valueNow = rainfallNow;
+					rain.timeNow= getUTC();
+					rain.oldRainfall = rainfallNow;
+					Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+					rain.bValueChanged = true;
+				}
+				else
+				{
+					// it reported a rain event but amount did not change.
+					// TODO averaging.
+					Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+				}
+				
+				rain.bValueChanged = true;
+				
+			}
+		}
+	
   		
   	break;
 
@@ -182,6 +237,7 @@ void task_WxUI(void *)
 	delay(3000);		    //test
 	wind.timeHi = now();	//test
 
+	#define DELAY 18000/3   // 18 sec 3 displays
 	while(true)
 	{
 		if (wind.valUpdated)
@@ -190,15 +246,15 @@ void task_WxUI(void *)
 
 			WxDrawWindDisplay(wind);
  			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
-			delay(2000);
+			delay(DELAY);
 			
-			//WxDrawWindDisplay(temp);
- 			//Serial.printf("TEMP %.1f < %.1f < %.1f\n", temp.valueLo, temp.valueCurrent, temp.valueHi);
-			//delay(2000);
+			WxDrawTempDisplay(temp);
+ 			Serial.printf("TEMP %.1f < %.1f < %.1f\n", temp.valueLo, temp.valueCurrent, temp.valueHi);
+			delay(DELAY);
 
 			WxDrawRainDisplay(rain);
  			Serial.printf("RAIN %.1f\n", rain.valueNow );
-			delay(2000);
+			delay(DELAY);
 		}
 		delay(500);
 	}

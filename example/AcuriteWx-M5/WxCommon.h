@@ -14,6 +14,7 @@ public:
      WIND_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), valUpdated(false), valueColour(colour)
      {
         strcpy(valueName, name);
+        valueCurrent = 9999.;
      };
 
      uint32_t valueColour;
@@ -30,6 +31,28 @@ public:
 };
 
 
+
+class TEMP_ITEM{
+public:
+     TEMP_ITEM() { assert(0);};
+
+     TEMP_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), valUpdated(false), valueColour(colour)
+     {
+        strcpy(valueName, name);
+     };
+
+     uint32_t valueColour;
+
+     char valueName [30];
+	 float valueCurrent;
+	 float valueLo;
+     uint32_t timeLo;
+
+	 float valueHi;
+     uint32_t timeHi;
+
+	 bool  valUpdated;
+};
 
 class RAIN_ITEM{
 public:
