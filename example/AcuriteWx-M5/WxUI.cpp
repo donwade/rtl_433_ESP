@@ -70,7 +70,7 @@ JsonDocument jsonDecoded;
 WIND_ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
 RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
 
-TEMP_ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
+TEMP_ITEM temp ("TEMP C", RGB32toRGB565(0x00FFFF));
 HUMD_ITEM humd ("HUMIDITY", RGB32toRGB565(0xFF00FF));
 
 
@@ -207,7 +207,7 @@ void json_433_Callback(char* jsonIn)
 	  		Serial.printf("temp lo: %1.fC at %s\n", temp.valueLo, getHHMMSS(temp.timeLo));
 	  		Serial.printf("temp hi: %1.fC at %s\n", temp.valueHi, getHHMMSS(temp.timeHi));
 
-			temp.valUpdated = true;
+			temp.bValChanged = true;
 			temp.valueCurrent = tempNow;
 
 		}

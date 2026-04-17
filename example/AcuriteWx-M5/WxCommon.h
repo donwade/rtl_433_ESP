@@ -7,7 +7,8 @@
 
 extern char *getHHMMSS(uint32_t utc);
 
-class HUMD_ITEM{
+class HUMD_ITEM
+{
 public:
      HUMD_ITEM() { assert(0);};
 
@@ -59,7 +60,7 @@ class TEMP_ITEM{
 public:
      TEMP_ITEM() { assert(0);};
 
-     TEMP_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), valUpdated(false), valueColour(colour)
+     TEMP_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), bValChanged(false), valueColour(colour)
      {
         strcpy(valueName, name);
      };
@@ -74,7 +75,7 @@ public:
 	 float valueHi;
      uint32_t timeHi;
 
-	 bool  valUpdated;
+	 bool  bValChanged;
 };
 
 class RAIN_ITEM{
