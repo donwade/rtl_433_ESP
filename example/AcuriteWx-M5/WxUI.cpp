@@ -21,6 +21,7 @@ TickType_t xMsgSysTick;
 extern void WxDrawWindDisplay(WIND_ITEM &item);
 extern void WxDrawRainDisplay(RAIN_ITEM &item);
 extern void WxDrawTempDisplay(TEMP_ITEM &item);
+extern void WxDrawHumdDisplay(HUMD_ITEM &item);
 
 
 
@@ -70,7 +71,7 @@ WIND_ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
 RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
 
 TEMP_ITEM temp ("TEMP", RGB32toRGB565(0x00FFFF));
-WIND_ITEM hmdt ("HMDT", RGB32toRGB565(0xFF00FF));
+HUMD_ITEM humd ("HUMIDITY", RGB32toRGB565(0xFF00FF));
 
 
 void json_433_Callback(char* jsonIn)
@@ -88,11 +89,13 @@ void json_433_Callback(char* jsonIn)
   float tempNow;
   float windNow;
   float rainAbs;
-
+  float humdNow;
+  
   bool bHasTemp;
   bool bHasWind;
   bool bHasRain;
-
+  bool bHasHumd;
+  
   uint16_t id = jsonDecoded["id"];
   
   switch (id)
@@ -109,6 +112,7 @@ void json_433_Callback(char* jsonIn)
 		bHasTemp= jsonDecoded.containsKey("temperature_C");
 		bHasWind = jsonDecoded.containsKey("wind_avg_km_h");
 		bHasRain = jsonDecoded.containsKey("rain_mm");
+		bHasHumd = jsonDecoded.containsKey("humidity");
   	
 
 		serializeJsonPretty(jsonDecoded, Serial); Serial.print("\n");
@@ -144,6 +148,38 @@ void json_433_Callback(char* jsonIn)
 			wind.valueCurrent = windNow;
 
 		}
+
+		// humd ---------------------------------------------------------------
+
+		if (bHasHumd)
+		{
+			humdNow = jsonDecoded["humidity"];
+			
+	  		Serial.printf(FG_GREEN "humd =%.1f \n" FG_DONE, humdNow);
+			if (humdNow != humd.valueCurrent)
+			{
+				if (humd.valueHi < humdNow)
+				{
+					humd.valueHi = humdNow;
+					humd.timeHi = getUTC();
+				}	
+				
+				if (humd.valueLo > humdNow)
+				{
+					humd.valueLo = humdNow;
+					humd.timeLo = getUTC();
+				}				
+
+	  		}
+
+	  		Serial.printf("humd lo: %1.f %% %s\n", humd.valueLo, getHHMMSS(humd.timeLo));
+	  		Serial.printf("humd hi: %1.f %% %s\n", humd.valueHi, getHHMMSS(humd.timeHi));
+	  		
+			humd.bValChanged = true;
+			humd.valueCurrent = humdNow;
+
+		}
+
 
 		// temperature ---------------------------------------------------------------
 
@@ -246,6 +282,10 @@ void task_WxUI(void *)
 
 			WxDrawWindDisplay(wind);
  			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
+			delay(DELAY);
+			
+			WxDrawHumdDisplay(humd);
+ 			Serial.printf("HUMD %.1f < %.1f < %.1f\n", humd.valueLo, humd.valueCurrent, humd.valueHi);
 			delay(DELAY);
 			
 			WxDrawTempDisplay(temp);

@@ -7,6 +7,29 @@
 
 extern char *getHHMMSS(uint32_t utc);
 
+class HUMD_ITEM{
+public:
+     HUMD_ITEM() { assert(0);};
+
+     HUMD_ITEM(const char *name, uint32_t colour): valueLo(99), valueHi(-99), bValChanged(false), valueColour(colour)
+     {
+        strcpy(valueName, name);
+        valueCurrent = 9999.;
+     };
+
+     uint32_t valueColour;
+
+     char valueName [30];
+	 float valueCurrent;
+	 float valueLo;
+     uint32_t timeLo;
+
+	 float valueHi;
+     uint32_t timeHi;
+
+	 bool  bValChanged;
+};
+
 class WIND_ITEM{
 public:
      WIND_ITEM() { assert(0);};
