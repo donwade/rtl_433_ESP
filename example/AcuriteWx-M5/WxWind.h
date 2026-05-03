@@ -9,7 +9,7 @@
 typedef int TFT_COLOUR;
 
 extern unsigned long getUTC();
-extern char *getHHMMSS(uint32_t utc);
+extern char *getHHMMapm(uint32_t utc);
 extern char *getDDMMYY(uint32_t utc);
 
 

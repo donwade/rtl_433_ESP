@@ -27,7 +27,25 @@ TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};	// UTC - 5 hours
 #define STATS_FONT &fonts::FreeMono12pt7b
 
 
-char *getHHMMSS(uint32_t utc)
+
+char *getHHMM(uint32_t utc)
+{
+	static char msg[70];
+	Timezone usEastern(usEDT, usEST);  // setup dst and timezone recipes
+
+    time_t local = usEastern.toLocal(utc);
+    //Serial.printf("************* %02d:%02d:%02d\n", hour(local), minute(local), second(local));
+    
+	struct tm *remote ;
+	remote = localtime( &local );
+
+	//https://www.geeksforgeeks.org/cpp/strftime-function-in-c/
+
+	strftime(msg, sizeof(msg), "%I:%M", remote);
+	return msg;
+}
+
+char *getHHMMapm(uint32_t utc)
 {
 	static char msg[70];
 	Timezone usEastern(usEDT, usEST);  // setup dst and timezone recipes
@@ -73,7 +91,6 @@ void WxDrawWindDisplay(WIND_ITEM &item)
 	char msg[300];
 
 	backgnd = BLACK;
-	M5.Lcd.clear();
 
 	// don't make 0 seem as a record. windspeed == 0 
 	if ( item.valueCurrent == 0 || (item.valueCurrent < item.valueHi && item.valueCurrent > item.valueLo))
@@ -85,6 +102,10 @@ void WxDrawWindDisplay(WIND_ITEM &item)
 		// Setting a record !!!!
 		foregnd = RED;
 	}
+	
+	M5.Lcd.setTextColor(foregnd, backgnd);
+	
+	M5.Lcd.clear();
 
     // Get dimensions
     uint16_t screenWidth = M5.Lcd.width()-1;
@@ -113,11 +134,11 @@ void WxDrawWindDisplay(WIND_ITEM &item)
 	//-------------- time ---------------
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getHHMMSS(item.timeLo));
+	sprintf(msg, "%s", getHHMMapm(item.timeLo));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
-	sprintf(msg, "%s", getHHMMSS(item.timeHi));
+	sprintf(msg, "%s", getHHMMapm(item.timeHi));
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
 
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
@@ -197,8 +218,10 @@ void WxDrawHumdDisplay(HUMD_ITEM &item)
 	uint32_t backgnd;
 	char msg[300];
 
-	foregnd = item.bValChanged ? RED : item.valueColour;
+	foregnd = CYAN;
 	backgnd = BLACK;
+	
+	M5.Lcd.setTextColor(foregnd, backgnd);
 	M5.Lcd.clear();
 
 	M5.Lcd.fillScreen(backgnd);
@@ -208,10 +231,6 @@ void WxDrawHumdDisplay(HUMD_ITEM &item)
     uint16_t screenHeight = M5.Lcd.height()-1;
 	uint16_t radius = min(screenWidth, screenHeight) /2;
 	
-    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius, CYAN);
-    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius - 8, BLACK);
-
-
 	M5.Lcd.setTextSize(1);
 
 	//M5.Lcd.setFont(STATS_FONT);
@@ -242,11 +261,11 @@ void WxDrawHumdDisplay(HUMD_ITEM &item)
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getHHMMSS(item.timeLo));
+	sprintf(msg, "%s", getHHMMapm(item.timeLo));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
-	sprintf(msg, "%s", getHHMMSS(item.timeHi));
+	sprintf(msg, "%s", getHHMMapm(item.timeHi));
 	M5.Lcd.drawString(msg, screenWidth -BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	//--------- value --------------------
@@ -314,6 +333,7 @@ void WxDrawTempDisplay(TEMP_ITEM &item)
 	M5.Lcd.clear();
 
 	M5.Lcd.fillScreen(backgnd);
+	M5.Lcd.setTextColor(foregnd, backgnd);
  
 	// Get dimensions
 	uint16_t screenWidth = M5.Lcd.width()-1;
@@ -354,11 +374,11 @@ void WxDrawTempDisplay(TEMP_ITEM &item)
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);	// top left
-	sprintf(msg, "%s", getHHMMSS(item.timeLo));
+	sprintf(msg, "%s", getHHMMapm(item.timeLo));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	M5.Lcd.setTextDatum(TR_DATUM);	// top right
-	sprintf(msg, "%s", getHHMMSS(item.timeHi));
+	sprintf(msg, "%s", getHHMMapm(item.timeHi));
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	//--------- value --------------------
@@ -425,34 +445,25 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 	uint32_t backgnd;
 	char msg[300];
 
-	foregnd = item.bValueChanged ? RED : item.valueColour;
+	foregnd = PINK; // item.bValueChanged ? RED : item.valueColour;
 	backgnd = BLACK;
 	M5.Lcd.clear();
 
 	M5.Lcd.fillScreen(backgnd);
+	M5.Lcd.setTextColor(foregnd, backgnd);
  
     // Get dimensions
     uint16_t screenWidth = M5.Lcd.width()-1;
     uint16_t screenHeight = M5.Lcd.height()-1;
 	uint16_t radius = min(screenWidth, screenHeight) /2;
 	
-    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius, CYAN);
-    //M5.Lcd.fillCircle(screenWidth/2, screenHeight/2, radius - 8, BLACK);
-
-
 	M5.Lcd.setTextSize(1);
-
-	//M5.Lcd.setFont(STATS_FONT);
 
 	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
 	sprintf(msg, "LAST=%.1f", item.oldRainfall);
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK, STATS_FONT);	//set left edge of text
-
-	//M5.Lcd.setTextDatum(TC_DATUM);  // center on X
-	//M5.Lcd.drawString("NOW", screenWidth/2, BTWEAK, STATS_FONT); 
-
 
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
  	sprintf(msg, "TOTAL=%.1f", item.valueSeenOnBoot);
@@ -465,16 +476,11 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 	sprintf(msg, "%s", getDDMMYY(item.timeNow));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
-	//M5.Lcd.setTextDatum(TR_DATUM);  // top right
-	//sprintf(msg, "%s", getDDMMYY(item.timeHi));
-	//M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK + cHeight1, STATS_FONT); //set right edge of text
-
-	
 	//------- date ----------------
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getHHMMSS(item.timeNow));
+	sprintf(msg, "%s", getHHMMapm(item.timeNow));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	//--------- value --------------------
@@ -524,6 +530,81 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 		screenWidth/2, 
 		cHeight1,
 		 TOPIC_FONT);
+
+	M5.Lcd.display();
+
+}
+
+
+
+void WxDrawClokDisplay(CLOK_ITEM &item)
+{
+	uint16_t cHeight1;
+
+	uint32_t foregnd;
+	uint32_t backgnd;
+	char msg[300];
+
+	foregnd = RED;
+	backgnd = BLACK;
+	M5.Lcd.clear();
+
+	M5.Lcd.fillScreen(backgnd);
+ 	M5.Lcd.setTextColor(foregnd, backgnd);
+ 	
+    // Get dimensions
+    uint16_t screenWidth = M5.Lcd.width()-1;
+    uint16_t screenHeight = M5.Lcd.height()-1;
+	uint16_t radius = min(screenWidth, screenHeight) /2;
+	
+	M5.Lcd.setTextSize(2);
+
+	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
+
+	//--------- value --------------------
+	
+	M5.Lcd.setTextDatum(TC_DATUM);  // Centre text on x,y position
+
+	//https://m5stack.lang-ship.com/howto/m5gfx/font/   //TIP
+
+	char clock[ 30];
+	strcpy(clock, getHHMM(getUTC()));
+	
+	if (clock[0] == '0') strcpy(clock, &clock[1]);  // kill any leading 0
+	M5.Lcd.setTextColor(foregnd , backgnd);
+
+	M5.Lcd.drawString(
+		 clock, 
+		 screenWidth/2, screenHeight/2,
+		 VALUE_FONT);
+/*		 
+	// show units =----------------
+	// slam next text to right edge
+	M5.Lcd.setTextDatum(TR_DATUM);  // CV + RH text on x,y position
+
+	M5.Lcd.setTextSize(2);
+	M5.Lcd.drawString(
+		 "mm", 
+		 screenWidth,  // start on right edge and print to left
+		 cHeight1 + M5.Lcd.fontHeight(VALUE_FONT)/2,
+		 TOPIC_FONT);
+
+
+	cHeight1 += M5.Lcd.fontHeight(VALUE_FONT)/2 + VSPACE;
+	
+	M5.Lcd.setTextDatum(TC_DATUM);  // CV + RH text on x,y position
+
+	// show units
+	M5.Lcd.setTextSize(2);
+ 
+ 	cHeight1 += M5.Lcd.fontHeight(TOPIC_FONT) *3/2 + VSPACE *2;
+
+	M5.Lcd.drawString(
+		item.valueName, 
+		screenWidth/2, 
+		cHeight1,
+		 TOPIC_FONT);
+*/
 
 	M5.Lcd.display();
 

@@ -22,6 +22,7 @@ extern void WxDrawWindDisplay(WIND_ITEM &item);
 extern void WxDrawRainDisplay(RAIN_ITEM &item);
 extern void WxDrawTempDisplay(TEMP_ITEM &item);
 extern void WxDrawHumdDisplay(HUMD_ITEM &item);
+extern void WxDrawClokDisplay(CLOK_ITEM &item);
 
 
 
@@ -67,12 +68,13 @@ void setup() {
 JsonDocument jsonDecoded;
 
 
-WIND_ITEM wind ("WIND", RGB32toRGB565(0x00FF00));
+WIND_ITEM wind ("WIND", RGB32toRGB565(0xFF0000));
 RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
 
 TEMP_ITEM temp ("TEMP C", RGB32toRGB565(0x00FFFF));
 HUMD_ITEM humd ("HUMIDITY", RGB32toRGB565(0xFF00FF));
 
+CLOK_ITEM clok ("TIME", RGB32toRGB565(0xFF00FF));
 
 void json_433_Callback(char* jsonIn)
 {
@@ -141,8 +143,8 @@ void json_433_Callback(char* jsonIn)
 
 	  		}
 
-	  		Serial.printf("wind lo: %1.f kph at %s\n", wind.valueLo, getHHMMSS(wind.timeLo));
-	  		Serial.printf("wind hi: %1.f kph at %s\n", wind.valueHi, getHHMMSS(wind.timeHi));
+	  		Serial.printf("wind lo: %1.f kph at %s\n", wind.valueLo, getHHMMapm(wind.timeLo));
+	  		Serial.printf("wind hi: %1.f kph at %s\n", wind.valueHi, getHHMMapm(wind.timeHi));
 	  		
 			wind.valUpdated = true;
 			wind.valueCurrent = windNow;
@@ -172,8 +174,8 @@ void json_433_Callback(char* jsonIn)
 
 	  		}
 
-	  		Serial.printf("humd lo: %1.f %% %s\n", humd.valueLo, getHHMMSS(humd.timeLo));
-	  		Serial.printf("humd hi: %1.f %% %s\n", humd.valueHi, getHHMMSS(humd.timeHi));
+	  		Serial.printf("humd lo: %1.f %% %s\n", humd.valueLo, getHHMMapm(humd.timeLo));
+	  		Serial.printf("humd hi: %1.f %% %s\n", humd.valueHi, getHHMMapm(humd.timeHi));
 	  		
 			humd.bValChanged = true;
 			humd.valueCurrent = humdNow;
@@ -204,8 +206,8 @@ void json_433_Callback(char* jsonIn)
 
 	  		}
 
-	  		Serial.printf("temp lo: %1.fC at %s\n", temp.valueLo, getHHMMSS(temp.timeLo));
-	  		Serial.printf("temp hi: %1.fC at %s\n", temp.valueHi, getHHMMSS(temp.timeHi));
+	  		Serial.printf("temp lo: %1.fC at %s\n", temp.valueLo, getHHMMapm(temp.timeLo));
+	  		Serial.printf("temp hi: %1.fC at %s\n", temp.valueHi, getHHMMapm(temp.timeHi));
 
 			temp.bValChanged = true;
 			temp.valueCurrent = tempNow;
@@ -241,14 +243,14 @@ void json_433_Callback(char* jsonIn)
 					rain.valueNow = rainfallNow;
 					rain.timeNow= getUTC();
 					rain.oldRainfall = rainfallNow;
-					Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+					Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMapm(rain.timeNow));
 					rain.bValueChanged = true;
 				}
 				else
 				{
 					// it reported a rain event but amount did not change.
 					// TODO averaging.
-					Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMSS(rain.timeNow));
+					Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMapm(rain.timeNow));
 				}
 				
 				rain.bValueChanged = true;
@@ -280,6 +282,9 @@ void task_WxUI(void *)
 		{
 			wind.valUpdated = false;
 
+			WxDrawClokDisplay(clok);
+			delay(DELAY);
+
 			WxDrawWindDisplay(wind);
  			Serial.printf("WIND %.1f < %.1f < %.1f\n", wind.valueLo, wind.valueCurrent, wind.valueHi);
 			delay(DELAY);
@@ -295,6 +300,7 @@ void task_WxUI(void *)
 			WxDrawRainDisplay(rain);
  			Serial.printf("RAIN %.1f\n", rain.valueNow );
 			delay(DELAY);
+
 		}
 		delay(500);
 	}
