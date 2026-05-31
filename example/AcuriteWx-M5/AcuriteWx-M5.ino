@@ -21,6 +21,7 @@
 #define JSON_MSG_BUFFER 512
 
 char messageBuffer[JSON_MSG_BUFFER];
+char * const TAG="main";
 
 rtl_433_ESP rf; // use -1 to disable transmitter
 
@@ -57,7 +58,12 @@ void logJson(JsonDocument jsondata) {
 //-------------------------------------------------------------
 void setup() {
 
- setup_WxUI();	// claim any SPI devs now
+ //esp_log_level_set("*", ESP_LOG_ERROR);        // set all components to ERROR level
+ esp_log_level_set("*", ESP_LOG_INFO);        // set all components to ERROR level
+ esp_log_level_set("wifi", ESP_LOG_WARN);      // enable WARN logs from WiFi stack
+ esp_log_level_set("dhcpc", ESP_LOG_INFO);     // enable INFO logs from DHCP client
+
+setup_WxUI();	// claim any SPI devs now
   
 #ifndef LOG_LEVEL
   LOG_LEVEL_SILENT
@@ -73,6 +79,9 @@ void setup() {
 
   _setup_SD();			// SD AFTER all SPI claims (LORA etc)  are done.
   writeJsonToSD();
+
+  log_i("ssssssssssssssssssssssssssssssssssssssss");
+  log_e("llllllllllllllllllllllllllllllllllllllll");
 }
 
 //-------------------------------------------------------------
