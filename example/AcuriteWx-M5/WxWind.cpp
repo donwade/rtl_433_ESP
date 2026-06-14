@@ -218,8 +218,8 @@ void WxDrawHumdDisplay(HUMD_ITEM &item)
 	uint32_t backgnd;
 	char msg[300];
 
-	foregnd = CYAN;
-	backgnd = BLACK;
+	foregnd = TFT_YELLOW;
+	backgnd = TFT_BLACK;
 	
 	M5.Lcd.setTextColor(foregnd, backgnd);
 	M5.Lcd.clear();
@@ -462,25 +462,25 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 	// https://doc-tft-espi.readthedocs.io/tft_espi/datums/
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "LAST=%.1f", item.oldRainfall);
+	sprintf(msg, "LAST=%d", (int)item.lastAbsRain);
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK, STATS_FONT);	//set left edge of text
 
 	M5.Lcd.setTextDatum(TR_DATUM);  // top right
- 	sprintf(msg, "TOTAL=%.1f", item.valueSeenOnBoot);
+ 	sprintf(msg, "TOTAL=%d", (int)item.lastSeenRain);
 	M5.Lcd.drawString(msg, screenWidth-BTWEAK , BTWEAK, STATS_FONT); //set right edge of text
 
 	//-------time -----------------
 	cHeight1 = M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getDDMMYY(item.timeNow));
+	sprintf(msg, "%s", getDDMMYY(item.timeOfLastRain));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	//------- date ----------------
 	cHeight1 += M5.Lcd.fontHeight(STATS_FONT) + VSPACE;
 
 	M5.Lcd.setTextDatum(TL_DATUM);  // top left
-	sprintf(msg, "%s", getHHMMapm(item.timeNow));
+	sprintf(msg, "%s", getHHMMapm(item.timeOfLastRain));
 	M5.Lcd.drawString(msg, BTWEAK, BTWEAK + cHeight1, STATS_FONT);	//set left edge of text
 	
 	//--------- value --------------------
@@ -492,10 +492,9 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 	//https://m5stack.lang-ship.com/howto/m5gfx/font/   //TIP
 	M5.Lcd.setTextSize(3);
 
-	if (item.oldRainfall < 10.)
-		sprintf(msg, "%.1f", item.oldRainfall);
-	else
-		sprintf(msg, "%2d", (int) item.oldRainfall);
+    sprintf(msg, "%.1f", item.runningTotal);
+    
+	//item.runningTotal = 0; 		// displayed. now clear it.
 	
 	M5.Lcd.setTextColor(foregnd , backgnd);
 
@@ -505,26 +504,15 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 		 VALUE_FONT);
 		 
 	// show units =----------------
-	// slam next text to right edge
-	M5.Lcd.setTextDatum(TR_DATUM);  // CV + RH text on x,y position
 
-	M5.Lcd.setTextSize(2);
-	M5.Lcd.drawString(
-		 "mm", 
-		 screenWidth,  // start on right edge and print to left
-		 cHeight1 + M5.Lcd.fontHeight(VALUE_FONT)/2,
-		 TOPIC_FONT);
-
-
-	cHeight1 += M5.Lcd.fontHeight(VALUE_FONT)/2 + VSPACE;
-	
+	// locate bottom and move up.
+ 	cHeight1 = screenHeight - M5.Lcd.fontHeight(TOPIC_FONT) + VSPACE *2;
+ 	
 	M5.Lcd.setTextDatum(TC_DATUM);  // CV + RH text on x,y position
 
 	// show units
 	M5.Lcd.setTextSize(2);
  
- 	cHeight1 += M5.Lcd.fontHeight(TOPIC_FONT) *3/2 + VSPACE *2;
-
 	M5.Lcd.drawString(
 		item.valueName, 
 		screenWidth/2, 

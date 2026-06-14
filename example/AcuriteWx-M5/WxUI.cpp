@@ -69,7 +69,7 @@ JsonDocument jsonDecoded;
 
 
 WIND_ITEM wind ("WIND", RGB32toRGB565(0xFF0000));
-RAIN_ITEM rain ("RAIN", RGB32toRGB565(0xFFFF00));
+RAIN_ITEM rain ("RAIN mm", RGB32toRGB565(0xFFFF00));
 
 TEMP_ITEM temp ("TEMP C", RGB32toRGB565(0x00FFFF));
 HUMD_ITEM humd ("HUMIDITY", RGB32toRGB565(0xFF00FF));
@@ -79,7 +79,6 @@ CLOK_ITEM clok ("TIME", RGB32toRGB565(0xFF00FF));
 void json_433_Callback(char* jsonIn)
 {
    deserializeJson(jsonDecoded,jsonIn);
-  //logJson(jsonDecoded);
 
 
   static uint32_t lastTime = 0;
@@ -90,7 +89,7 @@ void json_433_Callback(char* jsonIn)
 
   float tempNow;
   float windNow;
-  float rainAbs;
+  float rainNow;
   float humdNow;
   
   bool bHasTemp;
@@ -218,54 +217,46 @@ void json_433_Callback(char* jsonIn)
 		
 		if (bHasRain)
 		{
-			rainAbs = jsonDecoded["rain_mm"];
-		
+			rainNow = jsonDecoded["rain_mm"];
+			Serial.printf(FG_RED "RAIN NOW =  %f\n"FG_DONE, rainNow);
+			
 			// lock in absolute total rain that the tower has.
-			if (!rain.valueSeenOnBoot && rainAbs)
+			if (!rain.lastSeenRain && rainNow)
 			{
-				rain.valueSeenOnBoot = rainAbs;
-				Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainAbs);
+				rain.lastSeenRain = rainNow;
+				Serial.printf(FG_BCYAN "locking in base rainfall %.1f\n" FG_DONE, rainNow);
 			}
 			
-			static int injectRain = 0;
-			// testing if (injectRain < 80) injectRain+=10;
+			float rainDeltaNow = rainNow - rain.lastSeenRain;
 			
-			rainAbs = rain.valueSeenOnBoot + injectRain;   // testing
-			
-			if (rain.valueSeenOnBoot && rainAbs)  // not all messages have rain
+			if (rainDeltaNow)
 			{
-				// message has a rain component 
-				float rainfallNow = rainAbs - rain.valueSeenOnBoot;
-				Serial.printf("abs rain = %f   diff rain = %f\n", rainAbs,  rainfallNow);
-			
-				if (rainfallNow != rain.oldRainfall)	// 
-				{
-					rain.valueNow = rainfallNow;
-					rain.timeNow= getUTC();
-					rain.oldRainfall = rainfallNow;
-					Serial.printf(FG_GREEN "increasing rain by %.1f mm ... time %s \n", rainfallNow, getHHMMapm(rain.timeNow));
-					rain.bValueChanged = true;
+					rain.runningTotal += rainDeltaNow;
+					rain.timeOfLastRain= getUTC();
+					rain.lastAbsRain = rainNow;
+					Serial.printf(FG_GREEN "increasing rain by %.1f mm to %.1f ... time %s \n", rainDeltaNow, rain.runningTotal, getHHMMapm(rain.timeOfLastRain));
+					
+					rain.lastSeenRain = rainNow;
+					
 				}
 				else
 				{
 					// it reported a rain event but amount did not change.
 					// TODO averaging.
-					Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainfallNow, getHHMMapm(rain.timeNow));
+					Serial.printf(FG_YELLOW "rain stopped at %.1f mm ... time %s \n", rainDeltaNow, getHHMMapm(rain.timeOfLastRain));
 				}
 				
-				rain.bValueChanged = true;
-				
 			}
-		}
 	
   		
-  	break;
+	  	break;
 
-  	default:
-  		String foo =jsonDecoded["model"];
-  		Serial.printf(FG_RED "unknown id %d ... %s\n" FG_DONE, id, foo.c_str());
-  	break;
-  }
+	  	default:
+	  		Serial.printf("unknown device id 0x%X\n", id);
+	  		String foo =jsonDecoded["model"];
+	  		Serial.printf(FG_RED "unknown id %d ... %s\n" FG_DONE, id, foo.c_str());
+	  	break;
+	}
 }
 
 
@@ -275,13 +266,13 @@ void task_WxUI(void *)
 	delay(3000);		    //test
 	wind.timeHi = now();	//test
 
-	#define DELAY 18000/3   // 18 sec 3 displays
+	#define DELAY 3000 //18000/3   // 18 sec 3 displays
 	while(true)
 	{
 		if (wind.valUpdated)
 		{
 			wind.valUpdated = false;
-
+#if 1
 			WxDrawClokDisplay(clok);
 			delay(DELAY);
 
@@ -296,9 +287,9 @@ void task_WxUI(void *)
 			WxDrawTempDisplay(temp);
  			Serial.printf("TEMP %.1f < %.1f < %.1f\n", temp.valueLo, temp.valueCurrent, temp.valueHi);
 			delay(DELAY);
-
+#endif
 			WxDrawRainDisplay(rain);
- 			Serial.printf("RAIN %.1f\n", rain.valueNow );
+ 			Serial.printf("RAIN %.1f\n", rain.runningTotal );
 			delay(DELAY);
 
 		}

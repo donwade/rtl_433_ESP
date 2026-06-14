@@ -106,22 +106,22 @@ class RAIN_ITEM{
 public:
      RAIN_ITEM() { assert(0);};
 
-     RAIN_ITEM(const char *name, uint32_t colour): valueNow(99), bValueChanged(false), valueColour(colour)
+     RAIN_ITEM(const char *name, uint32_t colour): runningTotal(0), bValueChanged(false), valueColour(colour)
      {
         strcpy(valueName, name);
-        oldRainfall = 0;
-        valueSeenOnBoot = 0;
+        lastAbsRain = 0;
+        lastSeenRain = 0;
 
      };
 
      uint32_t valueColour;
       char valueName [30];
 
-     float valueSeenOnBoot;
-     float oldRainfall;
+     float lastSeenRain;
+     float lastAbsRain;
 
-     float valueNow;
-     uint32_t timeNow;
+     float runningTotal;
+     uint32_t timeOfLastRain;
 
 //     float valueHi;
 //     uint32_t timeHi;
