@@ -45,6 +45,28 @@ char *getHHMM(uint32_t utc)
 	return msg;
 }
 
+bool bDayChanged(uint32_t utc)
+{
+	bool ret = false;
+	static char msg[70];
+	Timezone usEastern(usEDT, usEST);  // setup dst and timezone recipes
+	
+    time_t local = usEastern.toLocal(utc);
+
+	static uint32_t lastDate = -1;
+	uint32_t datenow = day(local);
+	
+	if (datenow != lastDate)
+	{
+		
+		Serial.printf("**bDayChanged ***** %02d vs %02d\n", datenow, lastDate);
+		ret = true;
+		lastDate = datenow;
+	}
+	
+	return ret;
+}
+
 char *getHHMMapm(uint32_t utc)
 {
 	static char msg[70];
@@ -493,8 +515,9 @@ void WxDrawRainDisplay(RAIN_ITEM &item)
 	M5.Lcd.setTextSize(3);
 
     sprintf(msg, "%.1f", item.runningTotal);
-    
-	//item.runningTotal = 0; 		// displayed. now clear it.
+
+    uint32_t tnow= getUTC();
+    if (bDayChanged(tnow)) item.runningTotal = 0;  // its a new day
 	
 	M5.Lcd.setTextColor(foregnd , backgnd);
 
